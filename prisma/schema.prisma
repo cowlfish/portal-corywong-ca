@@ -1,0 +1,625 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── MLS Mirror Database ───────────────────────────────────────────
+// Read-only mirror of TRREB feed via AMPRE RESO Web API.
+// This data is NEVER modified by the application — only by the sync pipeline.
+// Uses RESO Data Dictionary field naming conventions where applicable.
+
+model MlsListing {
+  id         String  @id @default(cuid())
+  listingKey String  @unique @map("listing_key")
+  mlsNumber  String  @unique @map("mls_number")
+  boardId    String? @map("board_id")
+
+  // Status
+  status          MlsListingStatus @default(ACTIVE)
+  statusChangeAt  DateTime?        @map("status_change_at")
+
+  // Pricing
+  listPrice     Decimal  @map("list_price") @db.Decimal(12, 2)
+  soldPrice     Decimal? @map("sold_price") @db.Decimal(12, 2)
+  originalPrice Decimal? @map("original_price") @db.Decimal(12, 2)
+
+  // Property type
+  propertyType    String? @map("property_type")
+  propertySubType String? @map("property_sub_type")
+  transactionType String? @map("transaction_type")
+
+  // Address
+  streetNumber    String? @map("street_number")
+  streetName      String? @map("street_name")
+  streetSuffix    String? @map("street_suffix")
+  streetDirection String? @map("street_direction")
+  unitNumber      String? @map("unit_number")
+  city            String?
+  province        String?
+  postalCode      String? @map("postal_code")
+  country         String? @default("CA")
+  municipality    String?
+  community       String?
+  neighbourhood   String?
+  area            String?
+
+  // Geo
+  latitude  Decimal? @db.Decimal(10, 7)
+  longitude Decimal? @db.Decimal(10, 7)
+
+  // Property details
+  bedrooms       Int?
+  bedroomsPlus   Int?     @map("bedrooms_plus")
+  bathrooms      Int?
+  bathroomsHalf  Int?     @map("bathrooms_half")
+  sqft           Decimal? @db.Decimal(10, 2)
+  sqftRangeMin   Decimal? @map("sqft_range_min") @db.Decimal(10, 2)
+  sqftRangeMax   Decimal? @map("sqft_range_max") @db.Decimal(10, 2)
+  lotSizeSqft    Decimal? @map("lot_size_sqft") @db.Decimal(12, 2)
+  lotFrontage    Decimal? @map("lot_frontage") @db.Decimal(8, 2)
+  lotDepth       Decimal? @map("lot_depth") @db.Decimal(8, 2)
+  yearBuilt      Int?     @map("year_built")
+  stories        Decimal? @db.Decimal(4, 1)
+  parkingSpaces  Int?     @map("parking_spaces")
+  garageType     String?  @map("garage_type")
+  garageSpaces   Int?     @map("garage_spaces")
+
+  // Condo-specific (common in TRREB/Toronto)
+  maintenanceFee Decimal? @map("maintenance_fee") @db.Decimal(10, 2)
+  condoExposure  String?  @map("condo_exposure")
+  condoStyle     String?  @map("condo_style")
+  balcony        String?
+  locker         String?
+
+  // Listing details
+  listDate         DateTime? @map("list_date")
+  soldDate         DateTime? @map("sold_date")
+  expiryDate       DateTime? @map("expiry_date")
+  daysOnMarket     Int?      @map("days_on_market")
+  virtualTourUrl   String?   @map("virtual_tour_url")
+  publicRemarks    String?   @map("public_remarks") @db.Text
+  extrasRemarks    String?   @map("extras_remarks") @db.Text
+  featuresRemarks  String?   @map("features_remarks") @db.Text
+
+  // Tax & assessment
+  taxAmount     Decimal? @map("tax_amount") @db.Decimal(10, 2)
+  taxYear       Int?     @map("tax_year")
+  assessedValue Decimal? @map("assessed_value") @db.Decimal(12, 2)
+
+  // Agent / office
+  listAgentName    String? @map("list_agent_name")
+  listAgentId      String? @map("list_agent_id")
+  listOfficeName   String? @map("list_office_name")
+  listOfficeId     String? @map("list_office_id")
+  coListAgentName  String? @map("co_list_agent_name")
+  coListAgentId    String? @map("co_list_agent_id")
+
+  // Sync metadata & AMPRE change-tracking timestamps
+  feedSourceId            String?   @map("feed_source_id")
+  feedUpdatedAt           DateTime  @map("feed_updated_at")
+  majorChangeTimestamp    DateTime? @map("major_change_timestamp")
+  photosChangeTimestamp   DateTime? @map("photos_change_timestamp")
+  documentsChangeTimestamp DateTime? @map("documents_change_timestamp")
+  syncedAt                DateTime  @default(now()) @map("synced_at")
+  rawPayload              Json?     @map("raw_payload")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  photos         MlsListingPhoto[]
+  rooms          MlsPropertyRoom[]
+  openHouses     MlsOpenHouse[]
+  priceHistory   MlsPriceHistory[]
+  favorites      Favorite[]
+  propertyAlerts PropertyAlert[]
+
+  @@index([status])
+  @@index([city, status])
+  @@index([community, status])
+  @@index([propertyType, status])
+  @@index([listPrice])
+  @@index([bedrooms, bathrooms])
+  @@index([feedUpdatedAt])
+  @@index([latitude, longitude])
+  @@index([listingKey])
+  @@map("mls_listings")
+}
+
+enum MlsListingStatus {
+  ACTIVE
+  SOLD
+  TERMINATED
+  EXPIRED
+  SUSPENDED
+  DELETED
+
+  @@map("mls_listing_status")
+}
+
+model MlsListingPhoto {
+  id          String @id @default(cuid())
+  listingId   String @map("listing_id")
+  photoUrl    String @map("photo_url") @db.Text
+  displayOrder Int   @default(0) @map("display_order")
+  caption     String? @db.Text
+  mediaType   String? @map("media_type")
+  width       Int?
+  height      Int?
+
+  syncedAt  DateTime @default(now()) @map("synced_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  listing MlsListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, displayOrder])
+  @@map("mls_listing_photos")
+}
+
+model MlsPropertyRoom {
+  id             String  @id @default(cuid())
+  listingId      String  @map("listing_id")
+  roomKey        String  @map("room_key")
+  roomType       String? @map("room_type")
+  roomLevel      String? @map("room_level")
+  roomDimensions String? @map("room_dimensions")
+  roomArea       Decimal? @map("room_area") @db.Decimal(10, 2)
+  roomDescription String? @map("room_description") @db.Text
+
+  syncedAt  DateTime @default(now()) @map("synced_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  listing MlsListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, roomKey])
+  @@index([listingId])
+  @@map("mls_property_rooms")
+}
+
+model MlsOpenHouse {
+  id        String   @id @default(cuid())
+  listingId String   @map("listing_id")
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+  remarks   String?  @db.Text
+  type      String?
+
+  syncedAt  DateTime @default(now()) @map("synced_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  listing MlsListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@index([startDate])
+  @@map("mls_open_houses")
+}
+
+model MlsPriceHistory {
+  id        String   @id @default(cuid())
+  listingId String   @map("listing_id")
+  changeDate DateTime @map("change_date")
+  oldPrice  Decimal  @map("old_price") @db.Decimal(12, 2)
+  newPrice  Decimal  @map("new_price") @db.Decimal(12, 2)
+  changeType String? @map("change_type")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  listing MlsListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, changeDate])
+  @@map("mls_price_history")
+}
+
+model MlsSyncRun {
+  id          String        @id @default(cuid())
+  startedAt   DateTime      @default(now()) @map("started_at")
+  completedAt DateTime?     @map("completed_at")
+  status      MlsSyncStatus @default(RUNNING)
+  syncType    String        @map("sync_type")
+
+  totalRecords   Int @default(0) @map("total_records")
+  insertedCount  Int @default(0) @map("inserted_count")
+  updatedCount   Int @default(0) @map("updated_count")
+  deletedCount   Int @default(0) @map("deleted_count")
+  errorCount     Int @default(0) @map("error_count")
+
+  errorDetails Json?   @map("error_details")
+  cursor       String?
+  cursorKey    String? @map("cursor_key")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([startedAt])
+  @@index([status])
+  @@map("mls_sync_runs")
+}
+
+enum MlsSyncStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+
+  @@map("mls_sync_status")
+}
+
+// ─── Client Portal ─────────────────────────────────────────────────
+// Auth, saved searches, favorites, alerts, and transaction viewing.
+// Shared auth layer used by both client portal (CAS-40) and transaction portal (CAS-39).
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  firstName     String   @map("first_name")
+  lastName      String   @map("last_name")
+  phone         String?
+  role          UserRole @default(CLIENT)
+  mfaEnabled    Boolean  @default(false) @map("mfa_enabled")
+  mfaSecret     String?  @map("mfa_secret")
+  emailVerified Boolean  @default(false) @map("email_verified")
+  isActive      Boolean  @default(true) @map("is_active")
+  lastLoginAt   DateTime? @map("last_login_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  savedSearches  SavedSearch[]
+  favorites      Favorite[]
+  propertyAlerts PropertyAlert[]
+  transactions   TransactionClient[]
+  sessions       Session[]
+  auditLogs      AuditLog[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+enum UserRole {
+  CLIENT
+  AGENT
+  ADMIN
+
+  @@map("user_role")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model SavedSearch {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  name   String
+
+  // Search criteria stored as structured JSON
+  criteria Json
+
+  alertEnabled  Boolean @default(false) @map("alert_enabled")
+  alertFrequency AlertFrequency @default(DAILY) @map("alert_frequency")
+  lastAlertedAt DateTime? @map("last_alerted_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyAlerts PropertyAlert[]
+
+  @@index([userId])
+  @@index([alertEnabled])
+  @@map("saved_searches")
+}
+
+enum AlertFrequency {
+  INSTANT
+  DAILY
+  WEEKLY
+
+  @@map("alert_frequency")
+}
+
+model Favorite {
+  id        String @id @default(cuid())
+  userId    String @map("user_id")
+  listingId String @map("listing_id")
+  notes     String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing MlsListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([userId])
+  @@index([listingId])
+  @@map("favorites")
+}
+
+model PropertyAlert {
+  id            String @id @default(cuid())
+  userId        String @map("user_id")
+  savedSearchId String @map("saved_search_id")
+  listingId     String @map("listing_id")
+
+  alertType AlertType @map("alert_type")
+  sentAt    DateTime? @map("sent_at")
+  readAt    DateTime? @map("read_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  savedSearch SavedSearch @relation(fields: [savedSearchId], references: [id], onDelete: Cascade)
+  listing     MlsListing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([savedSearchId])
+  @@index([sentAt])
+  @@map("property_alerts")
+}
+
+enum AlertType {
+  NEW_LISTING
+  PRICE_CHANGE
+  STATUS_CHANGE
+  OPEN_HOUSE
+
+  @@map("alert_type")
+}
+
+// ─── Transaction Portal ────────────────────────────────────────────
+// Secure transaction management. RBAC-enforced: clients see only their own.
+// Shared with CAS-39 (transaction management task).
+
+model Transaction {
+  id              String            @id @default(cuid())
+  transactionType TransactionType   @map("transaction_type")
+  status          TransactionStatus @default(ACTIVE)
+  address         String
+  mlsNumber       String?           @map("mls_number")
+
+  listPrice       Decimal?  @map("list_price") @db.Decimal(12, 2)
+  salePrice       Decimal?  @map("sale_price") @db.Decimal(12, 2)
+  closingDate     DateTime? @map("closing_date")
+  conditionDate   DateTime? @map("condition_date")
+
+  notes           String?   @db.Text
+  createdByAgentId String?  @map("created_by_agent_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  clients    TransactionClient[]
+  documents  TransactionDocument[]
+  stages     TransactionStage[]
+  forms      TransactionForm[]
+  auditLogs  AuditLog[]
+
+  @@index([status])
+  @@index([transactionType])
+  @@index([createdByAgentId])
+  @@map("transactions")
+}
+
+enum TransactionType {
+  BUYER
+  SELLER
+  LEASE
+  ASSIGNMENT
+
+  @@map("transaction_type")
+}
+
+enum TransactionStatus {
+  ACTIVE
+  CONDITIONAL
+  FIRM
+  CLOSED
+  CANCELLED
+
+  @@map("transaction_status")
+}
+
+model TransactionClient {
+  id            String @id @default(cuid())
+  transactionId String @map("transaction_id")
+  userId        String @map("user_id")
+  role          TransactionClientRole @default(PRIMARY)
+
+  addedAt DateTime @default(now()) @map("added_at")
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([transactionId, userId])
+  @@index([userId])
+  @@index([transactionId])
+  @@map("transaction_clients")
+}
+
+enum TransactionClientRole {
+  PRIMARY
+  SECONDARY
+  OBSERVER
+
+  @@map("transaction_client_role")
+}
+
+model TransactionDocument {
+  id            String @id @default(cuid())
+  transactionId String @map("transaction_id")
+  stageId       String? @map("stage_id")
+  name          String
+  category      String
+  storagePath   String @map("storage_path") @db.Text
+  encryptionIv  String @map("encryption_iv")
+  fileSize      Int?   @map("file_size")
+  mimeType      String? @map("mime_type")
+  uploadedById  String? @map("uploaded_by_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  transaction Transaction          @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  stage       TransactionStage?    @relation(fields: [stageId], references: [id])
+  accessLinks DocumentAccessLink[]
+  auditLogs   DocumentAuditLog[]
+
+  @@index([transactionId])
+  @@index([stageId])
+  @@index([category])
+  @@map("transaction_documents")
+}
+
+model DocumentAccessLink {
+  id          String    @id @default(cuid())
+  documentId  String    @map("document_id")
+  token       String    @unique
+  expiresAt   DateTime  @map("expires_at")
+  revokedAt   DateTime? @map("revoked_at")
+  createdById String    @map("created_by_id")
+  maxDownloads Int?     @map("max_downloads")
+  downloadCount Int     @default(0) @map("download_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  document  TransactionDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([documentId])
+  @@map("document_access_links")
+}
+
+model DocumentAuditLog {
+  id         String  @id @default(cuid())
+  documentId String  @map("document_id")
+  userId     String? @map("user_id")
+  action     String
+  ipAddress  String? @map("ip_address")
+  details    Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  document TransactionDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, createdAt])
+  @@index([userId])
+  @@map("document_audit_logs")
+}
+
+model TransactionStage {
+  id            String @id @default(cuid())
+  transactionId String @map("transaction_id")
+  name          String
+  description   String? @db.Text
+  displayOrder  Int    @default(0) @map("display_order")
+  isComplete    Boolean @default(false) @map("is_complete")
+  completedAt   DateTime? @map("completed_at")
+  dueDate       DateTime? @map("due_date")
+  notes         String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  transaction    Transaction           @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  checklistItems ChecklistItem[]
+  documents      TransactionDocument[]
+  forms          TransactionForm[]
+
+  @@index([transactionId, displayOrder])
+  @@map("transaction_stages")
+}
+
+model ChecklistItem {
+  id            String    @id @default(cuid())
+  stageId       String    @map("stage_id")
+  label         String
+  description   String?   @db.Text
+  required      Boolean   @default(false)
+  completed     Boolean   @default(false)
+  completedById String?   @map("completed_by_id")
+  completedAt   DateTime? @map("completed_at")
+  sortOrder     Int       @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  stage TransactionStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@index([stageId, sortOrder])
+  @@map("checklist_items")
+}
+
+model TransactionForm {
+  id            String  @id @default(cuid())
+  transactionId String  @map("transaction_id")
+  stageId       String? @map("stage_id")
+  title         String
+  description   String? @db.Text
+  schema        Json
+  sortOrder     Int     @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  transaction Transaction        @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  stage       TransactionStage?  @relation(fields: [stageId], references: [id])
+  submissions FormSubmission[]
+
+  @@index([transactionId])
+  @@index([stageId])
+  @@map("transaction_forms")
+}
+
+model FormSubmission {
+  id            String @id @default(cuid())
+  formId        String @map("form_id")
+  data          Json
+  submittedById String @map("submitted_by_id")
+
+  submittedAt DateTime @default(now()) @map("submitted_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  form TransactionForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId])
+  @@map("form_submissions")
+}
+
+model AuditLog {
+  id            String  @id @default(cuid())
+  userId        String? @map("user_id")
+  transactionId String? @map("transaction_id")
+  action        String
+  entityType    String  @map("entity_type")
+  entityId      String  @map("entity_id")
+  details       Json?
+  ipAddress     String? @map("ip_address")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([transactionId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

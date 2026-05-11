@@ -145,26 +145,61 @@ async function main() {
     apiToken: process.env.AMPRE_API_TOKEN!,
   });
 
-  const syncRun = await prisma.mlsSyncRun.create({
-    data: { syncType: "full" },
+  // Resume from last incomplete run if one exists
+  let existingRun = await prisma.mlsSyncRun.findFirst({
+    where: { status: "RUNNING", syncType: "full" },
+    orderBy: { startedAt: "desc" },
   });
 
-  console.log(`[sync] Started full sync run ${syncRun.id}`);
-
+  let syncRunId: string;
   let totalRecords = 0;
   let inserted = 0;
   let updated = 0;
   let errors = 0;
   let batchNum = 0;
-  let lastCursorTs: string | null = null;
-  let lastCursorKey: string | null = null;
+  let startCursor: { lastTimestamp: string; lastKey: string } | null = null;
+
+  if (existingRun?.cursor && existingRun?.cursorKey) {
+    syncRunId = existingRun.id;
+    totalRecords = existingRun.totalRecords;
+    inserted = existingRun.insertedCount;
+    updated = existingRun.updatedCount;
+    errors = existingRun.errorCount;
+    startCursor = { lastTimestamp: existingRun.cursor, lastKey: existingRun.cursorKey };
+    console.log(`[sync] Resuming run ${syncRunId} from cursor ${startCursor.lastTimestamp}/${startCursor.lastKey} (${totalRecords} records already processed)`);
+  } else {
+    const syncRun = await prisma.mlsSyncRun.create({ data: { syncType: "full" } });
+    syncRunId = syncRun.id;
+    console.log(`[sync] Started new full sync run ${syncRunId}`);
+  }
+
+  let lastCursorTs: string | null = startCursor?.lastTimestamp ?? null;
+  let lastCursorKey: string | null = startCursor?.lastKey ?? null;
+
+  // Build the async generator manually to support a starting cursor
+  let cursor = startCursor;
+  let hasMore = true;
 
   try {
-    for await (const delta of provider.fetchFullSync(1_000)) {
+    while (hasMore) {
+      const filter = cursor
+        ? `ModificationTimestamp gt ${cursor.lastTimestamp} or ` +
+          `(ModificationTimestamp eq ${cursor.lastTimestamp} and ListingKey gt '${cursor.lastKey}')`
+        : `StandardStatus eq 'Active'`;
+
+      const url =
+        `/Property?$filter=${encodeURIComponent(filter)}` +
+        `&$orderby=${encodeURIComponent("ModificationTimestamp asc,ListingKey asc")}` +
+        `&$top=1000`;
+
+      const data = await (provider as any).request(url);
+      const rows = (data.value ?? []) as Record<string, unknown>[];
+      const listings = rows.map((r: Record<string, unknown>) => (provider as any).mapListing(r));
+
       batchNum++;
       const batchStart = Date.now();
 
-      for (const listing of delta.listings) {
+      for (const listing of listings) {
         try {
           const result = await upsertListing(listing);
           totalRecords++;
@@ -172,61 +207,54 @@ async function main() {
           else updated++;
         } catch (err) {
           errors++;
-          if (errors <= 10) {
+          if (errors <= 20) {
             const msg = err instanceof Error ? err.message : JSON.stringify(err);
             console.error(`[sync] Error on ${listing.mlsNumber}: ${msg}`);
           }
         }
       }
 
-      lastCursorTs = delta.cursor?.lastTimestamp ?? null;
-      lastCursorKey = delta.cursor?.lastKey ?? null;
+      if (listings.length > 0) {
+        const last = listings[listings.length - 1];
+        lastCursorTs = last.feedUpdatedAt.toISOString();
+        lastCursorKey = last.listingKey;
+        cursor = { lastTimestamp: lastCursorTs!, lastKey: lastCursorKey! };
+      }
+
+      hasMore = rows.length === 1000;
 
       const elapsed = ((Date.now() - batchStart) / 1000).toFixed(1);
-      console.log(`[sync] Batch ${batchNum}: ${delta.listings.length} records in ${elapsed}s | Total: ${totalRecords} inserted=${inserted} updated=${updated} errors=${errors}`);
+      console.log(`[sync] Batch ${batchNum}: ${listings.length} records in ${elapsed}s | Total: ${totalRecords} inserted=${inserted} updated=${updated} errors=${errors}`);
 
-      await prisma.mlsSyncRun.update({
-        where: { id: syncRun.id },
-        data: {
-          totalRecords,
-          insertedCount: inserted,
-          updatedCount: updated,
-          errorCount: errors,
-          cursor: lastCursorTs,
-          cursorKey: lastCursorKey,
-        },
-      });
+      try {
+        await prisma.mlsSyncRun.update({
+          where: { id: syncRunId },
+          data: { totalRecords, insertedCount: inserted, updatedCount: updated, errorCount: errors, cursor: lastCursorTs, cursorKey: lastCursorKey },
+        });
+      } catch {
+        console.warn(`[sync] Could not update sync run record — continuing anyway`);
+      }
     }
 
-    await prisma.mlsSyncRun.update({
-      where: { id: syncRun.id },
-      data: {
-        status: "COMPLETED",
-        completedAt: new Date(),
-        totalRecords,
-        insertedCount: inserted,
-        updatedCount: updated,
-        errorCount: errors,
-        cursor: lastCursorTs,
-        cursorKey: lastCursorKey,
-      },
-    });
+    try {
+      await prisma.mlsSyncRun.update({
+        where: { id: syncRunId },
+        data: { status: "COMPLETED", completedAt: new Date(), totalRecords, insertedCount: inserted, updatedCount: updated, errorCount: errors, cursor: lastCursorTs, cursorKey: lastCursorKey },
+      });
+    } catch {
+      console.warn(`[sync] Could not mark sync run as COMPLETED`);
+    }
 
     console.log(`[sync] COMPLETED: ${totalRecords} records (${inserted} new, ${updated} updated, ${errors} errors)`);
   } catch (err) {
-    await prisma.mlsSyncRun.update({
-      where: { id: syncRun.id },
-      data: {
-        status: "FAILED",
-        completedAt: new Date(),
-        totalRecords,
-        insertedCount: inserted,
-        updatedCount: updated,
-        errorCount: errors + 1,
-        cursor: lastCursorTs,
-        cursorKey: lastCursorKey,
-      },
-    });
+    try {
+      await prisma.mlsSyncRun.update({
+        where: { id: syncRunId },
+        data: { status: "FAILED", completedAt: new Date(), totalRecords, insertedCount: inserted, updatedCount: updated, errorCount: errors + 1, cursor: lastCursorTs, cursorKey: lastCursorKey },
+      });
+    } catch {
+      console.warn(`[sync] Could not mark sync run as FAILED`);
+    }
     console.error(`[sync] FAILED after ${totalRecords} records:`, err);
     process.exit(1);
   }

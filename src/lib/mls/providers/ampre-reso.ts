@@ -185,16 +185,12 @@ export class AmpreResoProvider implements MlsFeedProvider {
         ? Number(raw.BathroomsTotalInteger)
         : undefined,
       bathroomsHalf: raw.BathroomsHalf ? Number(raw.BathroomsHalf) : undefined,
-      sqft: raw.LivingArea ? Number(raw.LivingArea) : undefined,
-      sqftRangeMin: raw.LivingAreaRangeMin
-        ? Number(raw.LivingAreaRangeMin)
-        : undefined,
-      sqftRangeMax: raw.LivingAreaRangeMax
-        ? Number(raw.LivingAreaRangeMax)
-        : undefined,
+      sqft: raw.BuildingAreaTotal ? Number(raw.BuildingAreaTotal) : undefined,
+      sqftRangeMin: this.parseSqftRange(raw.LivingAreaRange as string)?.[0],
+      sqftRangeMax: this.parseSqftRange(raw.LivingAreaRange as string)?.[1],
       lotSizeSqft: raw.LotSizeArea ? Number(raw.LotSizeArea) : undefined,
-      lotFrontage: undefined,
-      lotDepth: undefined,
+      lotFrontage: raw.LotWidth ? Number(raw.LotWidth) : undefined,
+      lotDepth: raw.LotDepth ? Number(raw.LotDepth) : undefined,
       yearBuilt: raw.YearBuilt ? Number(raw.YearBuilt) : undefined,
       stories: raw.StoriesTotal ? Number(raw.StoriesTotal) : undefined,
       parkingSpaces: raw.ParkingTotal ? Number(raw.ParkingTotal) : undefined,
@@ -256,6 +252,17 @@ export class AmpreResoProvider implements MlsFeedProvider {
         raw.OpenHouse as Record<string, unknown>[] | undefined
       ),
     };
+  }
+
+  private parseSqftRange(
+    range?: string
+  ): [number, number] | undefined {
+    if (!range) return undefined;
+    const parts = range.split("-").map((s) => parseInt(s.trim(), 10));
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      return [parts[0], parts[1]];
+    }
+    return undefined;
   }
 
   private mapStatus(status?: string): MlsFeedListing["status"] {

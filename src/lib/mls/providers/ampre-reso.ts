@@ -138,14 +138,22 @@ export class AmpreResoProvider implements MlsFeedProvider {
     return res.json() as Promise<Record<string, unknown>>;
   }
 
+  // ── Helpers ────────────────────────────────────────────────────────
+
+  private str(val: unknown): string | undefined {
+    if (val == null) return undefined;
+    if (Array.isArray(val)) return val.length > 0 ? val.join(", ") : undefined;
+    return String(val);
+  }
+
   // ── Mapping (RESO Data Dictionary → internal types) ───────────────
 
   private mapListing(raw: Record<string, unknown>): MlsFeedListing {
     return {
       listingKey: String(raw.ListingKey ?? ""),
       mlsNumber: String(raw.ListingId ?? raw.ListingKey ?? ""),
-      boardId: raw.OriginatingSystemName as string | undefined,
-      status: this.mapStatus(raw.StandardStatus as string),
+      boardId: this.str(raw.OriginatingSystemName),
+      status: this.mapStatus(this.str(raw.StandardStatus)),
       statusChangeAt: raw.StatusChangeTimestamp
         ? new Date(raw.StatusChangeTimestamp as string)
         : undefined,
@@ -154,25 +162,23 @@ export class AmpreResoProvider implements MlsFeedProvider {
       originalPrice: raw.OriginalListPrice
         ? Number(raw.OriginalListPrice)
         : undefined,
-      propertyType: raw.PropertyType as string | undefined,
-      propertySubType: raw.PropertySubType as string | undefined,
-      transactionType: raw.TransactionType as string | undefined,
+      propertyType: this.str(raw.PropertyType),
+      propertySubType: this.str(raw.PropertySubType),
+      transactionType: this.str(raw.TransactionType),
 
-      streetNumber: raw.StreetNumber as string | undefined,
-      streetName: raw.StreetName as string | undefined,
-      streetSuffix: raw.StreetSuffix as string | undefined,
-      streetDirection: raw.StreetDirPrefix as string | undefined,
-      unitNumber: raw.UnitNumber as string | undefined,
-      city: raw.City as string | undefined,
-      province: raw.StateOrProvince as string | undefined,
-      postalCode: raw.PostalCode as string | undefined,
-      country: raw.Country as string | undefined,
-      municipality: (raw.Municipality ?? raw.CountyOrParish) as
-        | string
-        | undefined,
-      community: raw.CommunityName as string | undefined,
-      neighbourhood: raw.SubdivisionName as string | undefined,
-      area: raw.MLSAreaMajor as string | undefined,
+      streetNumber: this.str(raw.StreetNumber),
+      streetName: this.str(raw.StreetName),
+      streetSuffix: this.str(raw.StreetSuffix),
+      streetDirection: this.str(raw.StreetDirPrefix),
+      unitNumber: this.str(raw.UnitNumber),
+      city: this.str(raw.City),
+      province: this.str(raw.StateOrProvince),
+      postalCode: this.str(raw.PostalCode),
+      country: this.str(raw.Country),
+      municipality: this.str(raw.Municipality ?? raw.CountyOrParish),
+      community: this.str(raw.CommunityName),
+      neighbourhood: this.str(raw.SubdivisionName),
+      area: this.str(raw.MLSAreaMajor),
 
       latitude: raw.Latitude ? Number(raw.Latitude) : undefined,
       longitude: raw.Longitude ? Number(raw.Longitude) : undefined,
@@ -186,24 +192,24 @@ export class AmpreResoProvider implements MlsFeedProvider {
         : undefined,
       bathroomsHalf: raw.BathroomsHalf ? Number(raw.BathroomsHalf) : undefined,
       sqft: raw.BuildingAreaTotal ? Number(raw.BuildingAreaTotal) : undefined,
-      sqftRangeMin: this.parseSqftRange(raw.LivingAreaRange as string)?.[0],
-      sqftRangeMax: this.parseSqftRange(raw.LivingAreaRange as string)?.[1],
+      sqftRangeMin: this.parseSqftRange(this.str(raw.LivingAreaRange))?.[0],
+      sqftRangeMax: this.parseSqftRange(this.str(raw.LivingAreaRange))?.[1],
       lotSizeSqft: raw.LotSizeArea ? Number(raw.LotSizeArea) : undefined,
       lotFrontage: raw.LotWidth ? Number(raw.LotWidth) : undefined,
       lotDepth: raw.LotDepth ? Number(raw.LotDepth) : undefined,
       yearBuilt: raw.YearBuilt ? Number(raw.YearBuilt) : undefined,
       stories: raw.StoriesTotal ? Number(raw.StoriesTotal) : undefined,
       parkingSpaces: raw.ParkingTotal ? Number(raw.ParkingTotal) : undefined,
-      garageType: raw.GarageType as string | undefined,
+      garageType: this.str(raw.GarageType),
       garageSpaces: raw.GarageSpaces ? Number(raw.GarageSpaces) : undefined,
 
       maintenanceFee: raw.AssociationFee
         ? Number(raw.AssociationFee)
         : undefined,
-      condoExposure: raw.DirectionFaces as string | undefined,
-      condoStyle: raw.ArchitecturalStyle as string | undefined,
-      balcony: raw.Balcony as string | undefined,
-      locker: raw.Locker as string | undefined,
+      condoExposure: this.str(raw.DirectionFaces),
+      condoStyle: this.str(raw.ArchitecturalStyle),
+      balcony: this.str(raw.Balcony),
+      locker: this.str(raw.Locker),
 
       listDate: raw.ListingContractDate
         ? new Date(raw.ListingContractDate as string)
@@ -213,11 +219,10 @@ export class AmpreResoProvider implements MlsFeedProvider {
         ? new Date(raw.ExpirationDate as string)
         : undefined,
       daysOnMarket: raw.DaysOnMarket ? Number(raw.DaysOnMarket) : undefined,
-      virtualTourUrl: (raw.VirtualTourURLUnbranded ??
-        raw.VirtualTourURLBranded) as string | undefined,
-      publicRemarks: raw.PublicRemarks as string | undefined,
-      extrasRemarks: raw.Extras as string | undefined,
-      featuresRemarks: raw.Features as string | undefined,
+      virtualTourUrl: this.str(raw.VirtualTourURLUnbranded ?? raw.VirtualTourURLBranded),
+      publicRemarks: this.str(raw.PublicRemarks),
+      extrasRemarks: this.str(raw.Extras),
+      featuresRemarks: this.str(raw.Features),
 
       taxAmount: raw.TaxAnnualAmount ? Number(raw.TaxAnnualAmount) : undefined,
       taxYear: raw.TaxYear ? Number(raw.TaxYear) : undefined,
@@ -225,14 +230,14 @@ export class AmpreResoProvider implements MlsFeedProvider {
         ? Number(raw.TaxAssessedValue)
         : undefined,
 
-      listAgentName: raw.ListAgentFullName as string | undefined,
-      listAgentId: raw.ListAgentMlsId as string | undefined,
-      listOfficeName: raw.ListOfficeName as string | undefined,
-      listOfficeId: raw.ListOfficeMlsId as string | undefined,
-      coListAgentName: raw.CoListAgentFullName as string | undefined,
-      coListAgentId: raw.CoListAgentMlsId as string | undefined,
+      listAgentName: this.str(raw.ListAgentFullName),
+      listAgentId: this.str(raw.ListAgentMlsId),
+      listOfficeName: this.str(raw.ListOfficeName),
+      listOfficeId: this.str(raw.ListOfficeMlsId),
+      coListAgentName: this.str(raw.CoListAgentFullName),
+      coListAgentId: this.str(raw.CoListAgentMlsId),
 
-      feedSourceId: raw.ListingKey as string | undefined,
+      feedSourceId: this.str(raw.ListingKey),
       feedUpdatedAt: new Date(
         (raw.ModificationTimestamp as string) ?? new Date().toISOString()
       ),

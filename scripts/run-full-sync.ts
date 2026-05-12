@@ -95,7 +95,7 @@ async function upsertListing(listing: MlsFeedListing): Promise<"inserted" | "upd
     feedUpdatedAt: listing.feedUpdatedAt,
     majorChangeTimestamp: listing.majorChangeTimestamp,
     photosChangeTimestamp: listing.photosChangeTimestamp,
-    rawPayload: (listing.rawPayload as unknown as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+    // rawPayload omitted — exceeds Neon free tier 512 MB limit at scale
   };
 
   if (existing) {

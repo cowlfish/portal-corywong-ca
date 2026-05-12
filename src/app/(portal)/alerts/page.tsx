@@ -38,17 +38,44 @@ export default function AlertsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  async function markAllRead() {
+    const unreadIds = alerts.filter((a) => !a.readAt).map((a) => a.id);
+    if (unreadIds.length === 0) return;
+    const res = await fetch("/api/alerts", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ alertIds: unreadIds }),
+    });
+    if (res.ok) {
+      setAlerts((prev) =>
+        prev.map((a) =>
+          unreadIds.includes(a.id) ? { ...a, readAt: new Date().toISOString() } : a
+        )
+      );
+    }
+  }
+
   if (loading) {
     return <div className="text-slate-500">Loading alerts...</div>;
   }
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Property Alerts</h1>
-        <p className="text-slate-500 mt-1">
-          Notifications when new listings match your saved search criteria
-        </p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Property Alerts</h1>
+          <p className="text-slate-500 mt-1">
+            Notifications when new listings match your saved search criteria
+          </p>
+        </div>
+        {alerts.some((a) => !a.readAt) && (
+          <button
+            onClick={markAllRead}
+            className="text-sm text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
+          >
+            Mark all read
+          </button>
+        )}
       </div>
 
       {alerts.length === 0 ? (

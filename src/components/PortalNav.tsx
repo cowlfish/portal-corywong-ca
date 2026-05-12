@@ -2,24 +2,65 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-const NAV_ITEMS = [
+interface FeatureFlags {
+  messagingEnabled: boolean;
+  transactionsEnabled: boolean;
+  ampreFeedLive: boolean;
+}
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: string;
+  featureFlag?: keyof FeatureFlags;
+  agentOnly?: boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
   { href: "/listings", label: "Property Search", icon: "🏘️" },
   { href: "/searches", label: "Saved Searches", icon: "🔍" },
-  { href: "/favorites", label: "Favorites", icon: "❤️" },
+  { href: "/favorites", label: "My Lists", icon: "❤️" },
   { href: "/alerts", label: "Alerts", icon: "🔔" },
-  { href: "/market-snapshot", label: "Market", icon: "📊" },
   { href: "/tours", label: "Tours", icon: "🗺️" },
+  { href: "/market-snapshot", label: "Market", icon: "📊" },
   { href: "/cma", label: "CMA", icon: "📊" },
-  { href: "/transactions", label: "Transactions", icon: "📋" },
+  { href: "/transactions", label: "Transactions", icon: "📋", featureFlag: "transactionsEnabled" },
+  { href: "/admin/settings", label: "Settings", icon: "⚙️", agentOnly: true },
 ];
 
 export default function PortalNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [flags, setFlags] = useState<FeatureFlags>({
+    messagingEnabled: false,
+    transactionsEnabled: false,
+    ampreFeedLive: false,
+  });
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/feature-flags")
+      .then((r) => r.json())
+      .then(setFlags)
+      .catch(() => {});
+
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => setUserRole(d.user?.role ?? null))
+      .catch(() => {});
+  }, []);
+
+  const isAgent = userRole === "AGENT" || userRole === "ADMIN";
+
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.agentOnly && !isAgent) return false;
+    if (item.featureFlag && !flags[item.featureFlag]) return false;
+    return true;
+  });
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -38,7 +79,7 @@ export default function PortalNav() {
             </div>
 
             <div className="hidden md:flex items-center gap-1">
-              {NAV_ITEMS.map((item) => (
+              {visibleItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -78,7 +119,7 @@ export default function PortalNav() {
         {mobileOpen && (
           <div className="md:hidden border-t border-slate-700">
             <div className="px-2 pt-2 pb-3 space-y-1">
-              {NAV_ITEMS.map((item) => (
+              {visibleItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}

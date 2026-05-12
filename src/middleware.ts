@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 const PUBLIC_PATHS = ["/", "/login", "/register", "/api/auth/login", "/api/auth/register"];
 
+const TRANSACTIONS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TRANSACTIONS === "true";
+const MESSAGING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MESSAGING === "true";
+
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.some((p) => pathname === p)) return true;
   if (pathname.startsWith("/_next")) return true;
@@ -10,11 +13,35 @@ function isPublicPath(pathname: string): boolean {
   if (pathname.startsWith("/api/documents/access/")) return true;
   if (pathname.startsWith("/tours/share/")) return true;
   if (pathname.startsWith("/api/tours/share/")) return true;
+  if (pathname.startsWith("/api/feature-flags")) return true;
+  return false;
+}
+
+function isFeatureDisabled(pathname: string): boolean {
+  if (!TRANSACTIONS_ENABLED) {
+    if (pathname.startsWith("/transactions") || pathname.startsWith("/api/transactions")) {
+      return true;
+    }
+  }
+  if (!MESSAGING_ENABLED) {
+    if (pathname.startsWith("/messaging") || pathname.startsWith("/api/messaging")) {
+      return true;
+    }
+  }
   return false;
 }
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  if (isFeatureDisabled(pathname)) {
+    if (pathname.startsWith("/api/")) {
+      return addSecurityHeaders(
+        NextResponse.json({ error: "Feature disabled" }, { status: 403 })
+      );
+    }
+    return addSecurityHeaders(NextResponse.redirect(new URL("/dashboard", req.url)));
+  }
 
   const response = isPublicPath(pathname) ? NextResponse.next() : null;
 

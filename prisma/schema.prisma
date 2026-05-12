@@ -822,3 +822,14 @@ enum CmaSoldCompSource {
 
   @@map("cma_sold_comp_source")
 }
+
+// ─── Site Settings ─────────────────────────────────────────────────
+// Key-value store for runtime-toggleable feature flags and site config.
+
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("site_settings")
+}

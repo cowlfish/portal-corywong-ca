@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ComplianceFooter from "@/components/ComplianceFooter";
 
 export default function Home() {
   return (
@@ -35,7 +36,7 @@ export default function Home() {
             Your Real Estate Journey,<br />Organized
           </h1>
           <p className="mt-4 text-lg text-slate-500 max-w-lg mx-auto">
-            Search properties, save your favorites, track transactions, and stay updated
+            Search properties, save your favorites, schedule tours, and stay updated
             with alerts — all in one secure portal.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -62,10 +63,10 @@ export default function Home() {
               </p>
             </div>
             <div className="bg-white rounded-lg border border-slate-200 p-6">
-              <div className="text-2xl mb-3">📋</div>
-              <h3 className="font-semibold text-slate-900">Transaction Tracking</h3>
+              <div className="text-2xl mb-3">🗺️</div>
+              <h3 className="font-semibold text-slate-900">Tour Scheduling</h3>
               <p className="text-sm text-slate-500 mt-1">
-                View your transaction stages, documents, and key dates in one secure place.
+                Schedule and manage property showings with your agent in one place.
               </p>
             </div>
             <div className="bg-white rounded-lg border border-slate-200 p-6">
@@ -79,9 +80,7 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="py-6 text-center text-sm text-slate-400 border-t border-slate-200">
-        &copy; {new Date().getFullYear()} Cory Wong Real Estate. All rights reserved.
-      </footer>
+      <ComplianceFooter />
     </div>
   );
 }

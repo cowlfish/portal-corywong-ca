@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import ComplianceFooter from "@/components/ComplianceFooter";
 
 export const metadata: Metadata = {
   title: "Property Search — Cory Wong Real Estate",
@@ -32,9 +33,7 @@ export default function ListingsLayout({ children }: { children: React.ReactNode
         </div>
       </header>
       <main className="flex-1">{children}</main>
-      <footer className="py-6 text-center text-sm text-slate-400 border-t border-slate-200 bg-white">
-        &copy; {new Date().getFullYear()} Cory Wong Real Estate. All rights reserved.
-      </footer>
+      <ComplianceFooter />
     </div>
   );
 }

@@ -39,7 +39,11 @@ export default function AgentLoginPage() {
       return;
     }
 
-    router.push("/agent/dashboard");
+    if (data.user.mustChangePassword) {
+      router.push("/agent/settings/security");
+    } else {
+      router.push("/agent/dashboard");
+    }
   }
 
   return (

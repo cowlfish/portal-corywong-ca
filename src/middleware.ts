@@ -103,6 +103,20 @@ export function middleware(req: NextRequest) {
       }
       return addSecurityHeaders(NextResponse.redirect(new URL("/dashboard", req.url)));
     }
+
+    const mustChangePassword = payload.mustChangePassword === true;
+    if (mustChangePassword && (role === "AGENT" || role === "ADMIN")) {
+      const securityPath = "/agent/settings/security";
+      const allowedPaths = [securityPath, "/api/agent/change-password", "/api/auth/logout", "/api/auth/me"];
+      if (!allowedPaths.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+        if (pathname.startsWith("/api/")) {
+          return addSecurityHeaders(
+            NextResponse.json({ error: "Password change required", mustChangePassword: true }, { status: 403 })
+          );
+        }
+        return addSecurityHeaders(NextResponse.redirect(new URL(securityPath, req.url)));
+      }
+    }
   }
 
   return addSecurityHeaders(NextResponse.next());

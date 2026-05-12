@@ -19,6 +19,7 @@ async function main() {
         role: "AGENT",
         emailVerified: true,
         isActive: true,
+        mustChangePassword: true,
       },
     });
     console.log("Created agent user: cory@corywong.ca");

@@ -11,6 +11,7 @@ export interface JwtPayload {
   email: string;
   role: string;
   approvalStatus?: string;
+  mustChangePassword?: boolean;
 }
 
 export async function hashPassword(password: string): Promise<string> {

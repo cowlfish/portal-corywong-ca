@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
     email: user.email,
     role: user.role,
     approvalStatus: user.approvalStatus,
+    mustChangePassword: user.mustChangePassword,
   });
 
   const response = NextResponse.json({
@@ -48,6 +49,7 @@ export async function POST(req: NextRequest) {
       lastName: user.lastName,
       role: user.role,
       approvalStatus: user.approvalStatus,
+      mustChangePassword: user.mustChangePassword,
     },
   });
 

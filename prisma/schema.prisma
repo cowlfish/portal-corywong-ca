@@ -299,9 +299,10 @@ model User {
   isActive      Boolean   @default(true) @map("is_active")
   lastLoginAt   DateTime? @map("last_login_at")
 
-  approvalStatus   ApprovalStatus @default(PENDING) @map("approval_status")
-  inviteId         String?        @map("invite_id")
-  recoAcknowledged Boolean        @default(false) @map("reco_acknowledged")
+  mustChangePassword Boolean        @default(false) @map("must_change_password")
+  approvalStatus     ApprovalStatus @default(PENDING) @map("approval_status")
+  inviteId           String?        @map("invite_id")
+  recoAcknowledged   Boolean        @default(false) @map("reco_acknowledged")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

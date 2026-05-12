@@ -19,6 +19,7 @@ export async function GET() {
       emailVerified: true,
       approvalStatus: true,
       recoAcknowledged: true,
+      mustChangePassword: true,
       createdAt: true,
     },
   });

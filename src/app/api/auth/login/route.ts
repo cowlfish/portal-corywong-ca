@@ -24,12 +24,21 @@ export async function POST(req: NextRequest) {
     return jsonError("Invalid email or password", 401);
   }
 
+  if (user.approvalStatus === "REJECTED") {
+    return jsonError("Your account has been rejected. Please contact the agent.", 403);
+  }
+
   await prisma.user.update({
     where: { id: user.id },
     data: { lastLoginAt: new Date() },
   });
 
-  const token = createToken({ userId: user.id, email: user.email, role: user.role });
+  const token = createToken({
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+    approvalStatus: user.approvalStatus,
+  });
 
   const response = NextResponse.json({
     user: {
@@ -38,6 +47,7 @@ export async function POST(req: NextRequest) {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      approvalStatus: user.approvalStatus,
     },
   });
 

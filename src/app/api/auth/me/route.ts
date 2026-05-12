@@ -17,6 +17,8 @@ export async function GET() {
       role: true,
       mfaEnabled: true,
       emailVerified: true,
+      approvalStatus: true,
+      recoAcknowledged: true,
       createdAt: true,
     },
   });

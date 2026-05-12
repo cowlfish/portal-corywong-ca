@@ -298,19 +298,26 @@ model User {
   isActive      Boolean   @default(true) @map("is_active")
   lastLoginAt   DateTime? @map("last_login_at")
 
+  approvalStatus   ApprovalStatus @default(PENDING) @map("approval_status")
+  inviteId         String?        @map("invite_id")
+  recoAcknowledged Boolean        @default(false) @map("reco_acknowledged")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  savedSearches  SavedSearch[]
-  favorites      Favorite[]
-  propertyAlerts PropertyAlert[]
-  transactions   TransactionClient[]
-  sessions       Session[]
-  auditLogs      AuditLog[]
-  tours          Tour[]
+  savedSearches    SavedSearch[]
+  favorites        Favorite[]
+  propertyAlerts   PropertyAlert[]
+  transactions     TransactionClient[]
+  sessions         Session[]
+  auditLogs        AuditLog[]
+  tours            Tour[]
+  groupMemberships ClientGroupMember[]
+  invite           Invite? @relation(fields: [inviteId], references: [id], onDelete: SetNull)
 
   @@index([email])
   @@index([role])
+  @@index([approvalStatus])
   @@map("users")
 }
 
@@ -320,6 +327,74 @@ enum UserRole {
   ADMIN
 
   @@map("user_role")
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("approval_status")
+}
+
+model Invite {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  email     String?
+  createdBy String    @map("created_by")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  maxUses   Int       @default(1) @map("max_uses")
+  useCount  Int       @default(0) @map("use_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  users User[]
+
+  @@index([token])
+  @@index([createdBy])
+  @@map("invites")
+}
+
+model ClientGroup {
+  id      String @id @default(cuid())
+  name    String
+  agentId String @map("agent_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  members ClientGroupMember[]
+
+  @@index([agentId])
+  @@map("client_groups")
+}
+
+model ClientGroupMember {
+  id      String @id @default(cuid())
+  groupId String @map("group_id")
+  userId  String @map("user_id")
+
+  addedAt DateTime @default(now()) @map("added_at")
+
+  group ClientGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@index([groupId])
+  @@map("client_group_members")
+}
+
+model FeatureFlag {
+  id      String  @id @default(cuid())
+  key     String  @unique
+  enabled Boolean @default(false)
+  label   String?
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("feature_flags")
 }
 
 model Session {

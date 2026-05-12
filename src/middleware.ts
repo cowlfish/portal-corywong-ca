@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/api/auth/login", "/api/auth/register"];
+const PUBLIC_PATHS = [
+  "/", "/login", "/register", "/agent-login", "/pending-approval",
+  "/api/auth/login", "/api/auth/register",
+];
 
 const TRANSACTIONS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TRANSACTIONS === "true";
 const MESSAGING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MESSAGING === "true";
@@ -14,6 +17,8 @@ function isPublicPath(pathname: string): boolean {
   if (pathname.startsWith("/tours/share/")) return true;
   if (pathname.startsWith("/api/tours/share/")) return true;
   if (pathname.startsWith("/api/feature-flags")) return true;
+  if (pathname.startsWith("/register-invite/")) return true;
+  if (pathname.startsWith("/api/invites/")) return true;
   return false;
 }
 
@@ -31,6 +36,17 @@ function isFeatureDisabled(pathname: string): boolean {
   return false;
 }
 
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -43,25 +59,53 @@ export function middleware(req: NextRequest) {
     return addSecurityHeaders(NextResponse.redirect(new URL("/dashboard", req.url)));
   }
 
-  const response = isPublicPath(pathname) ? NextResponse.next() : null;
+  if (isPublicPath(pathname)) {
+    return addSecurityHeaders(NextResponse.next());
+  }
 
-  if (!response) {
-    const token = req.cookies.get("portal_session")?.value;
+  const token = req.cookies.get("portal_session")?.value;
 
-    if (!token && pathname.startsWith("/api/")) {
-      return addSecurityHeaders(
-        NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-      );
+  if (!token && pathname.startsWith("/api/")) {
+    return addSecurityHeaders(
+      NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    );
+  }
+
+  if (!token) {
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return addSecurityHeaders(NextResponse.redirect(loginUrl));
+  }
+
+  const payload = decodeJwtPayload(token);
+
+  if (payload) {
+    const role = payload.role as string;
+    const approvalStatus = payload.approvalStatus as string;
+
+    if (role === "CLIENT" && approvalStatus === "PENDING") {
+      if (pathname !== "/pending-approval" && !pathname.startsWith("/api/auth/")) {
+        if (pathname.startsWith("/api/")) {
+          return addSecurityHeaders(
+            NextResponse.json({ error: "Account pending approval" }, { status: 403 })
+          );
+        }
+        return addSecurityHeaders(NextResponse.redirect(new URL("/pending-approval", req.url)));
+      }
     }
 
-    if (!token) {
-      const loginUrl = new URL("/login", req.url);
-      loginUrl.searchParams.set("redirect", pathname);
-      return addSecurityHeaders(NextResponse.redirect(loginUrl));
+    const isAgentRoute = pathname.startsWith("/agent/") || pathname.startsWith("/api/agent/");
+    if (isAgentRoute && role !== "AGENT" && role !== "ADMIN") {
+      if (pathname.startsWith("/api/")) {
+        return addSecurityHeaders(
+          NextResponse.json({ error: "Forbidden" }, { status: 403 })
+        );
+      }
+      return addSecurityHeaders(NextResponse.redirect(new URL("/dashboard", req.url)));
     }
   }
 
-  return addSecurityHeaders(response || NextResponse.next());
+  return addSecurityHeaders(NextResponse.next());
 }
 
 function addSecurityHeaders(response: NextResponse): NextResponse {

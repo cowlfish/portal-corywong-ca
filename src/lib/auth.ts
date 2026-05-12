@@ -10,6 +10,7 @@ export interface JwtPayload {
   userId: string;
   email: string;
   role: string;
+  approvalStatus?: string;
 }
 
 export async function hashPassword(password: string): Promise<string> {

@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import PhotoCarousel from "@/components/listings/PhotoCarousel";
 import IdxDisclaimer from "@/components/listings/IdxDisclaimer";
+import CommentThread from "@/components/listings/CommentThread";
 
 const ListingMap = dynamic(() => import("@/components/listings/ListingMap"), {
   ssr: false,
@@ -383,6 +384,8 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
               </div>
             </div>
           )}
+
+          <CommentThread listingId={l.id} />
         </div>
 
         <div className="space-y-6">

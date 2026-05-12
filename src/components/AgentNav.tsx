@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/agent/clients", label: "Clients" },
   { href: "/agent/approvals", label: "Approvals" },
   { href: "/agent/groups", label: "Groups" },
+  { href: "/agent/comments", label: "Comments" },
   { href: "/agent/invites", label: "Invites" },
   { href: "/agent/settings", label: "Settings" },
 ];

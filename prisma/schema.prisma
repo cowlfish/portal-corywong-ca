@@ -119,6 +119,7 @@ model MlsListing {
   propertyAlerts PropertyAlert[]
   tourStops      TourStop[]
   cmaComps       CmaComp[]
+  comments       ListingComment[]
 
   @@index([status])
   @@index([city, status])
@@ -313,6 +314,7 @@ model User {
   auditLogs        AuditLog[]
   tours            Tour[]
   groupMemberships ClientGroupMember[]
+  listingComments  ListingComment[]
   invite           Invite? @relation(fields: [inviteId], references: [id], onDelete: SetNull)
 
   @@index([email])
@@ -896,6 +898,41 @@ enum CmaSoldCompSource {
   FEED
 
   @@map("cma_sold_comp_source")
+}
+
+// ─── Listing Comments ──────────────────────────────────────────────
+// Per-listing comment threads with granular visibility controls.
+
+model ListingComment {
+  id        String @id @default(cuid())
+  listingId String @map("listing_id")
+  authorId  String @map("author_id")
+  body      String @db.Text
+
+  visibility      CommentVisibility @default(PRIVATE)
+  visibleToUsers  String[]          @map("visible_to_users")
+  visibleToGroups String[]          @map("visible_to_groups")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  listing MlsListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  author  User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, createdAt])
+  @@index([authorId])
+  @@map("listing_comments")
+}
+
+enum CommentVisibility {
+  PRIVATE
+  GROUP
+  AGENT
+  PUBLIC
+  SPECIFIC_CLIENTS
+  CLIENT_GROUP
+
+  @@map("comment_visibility")
 }
 
 // ─── Site Settings ─────────────────────────────────────────────────

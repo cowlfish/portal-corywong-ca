@@ -1,7 +1,11 @@
 import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
+const connectionString = process.env.PORTAL_DATABASE_URL || process.env.DATABASE_URL;
+if (!connectionString) throw new Error("PORTAL_DATABASE_URL is not set");
+const adapter = new PrismaPg({ connectionString });
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   const agentExists = await prisma.user.findUnique({

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import PropertyCard, { type PropertyCardListing } from "@/components/listings/PropertyCard";
 import PropertyFilters, { type FilterValues, INITIAL_FILTERS } from "@/components/listings/PropertyFilters";
@@ -75,10 +76,29 @@ export default function ListingsPage() {
   return <ListingsContent />;
 }
 
+function useInitialFilters(): FilterValues {
+  const sp = useSearchParams();
+  return {
+    q: sp.get("q") || "",
+    minPrice: sp.get("minPrice") || "",
+    maxPrice: sp.get("maxPrice") || "",
+    beds: sp.get("beds") || "",
+    baths: sp.get("baths") || "",
+    propertyType: sp.get("propertyType") || "",
+    city: sp.get("city") || "",
+    neighbourhood: sp.get("neighbourhood") || "",
+    minSqft: sp.get("minSqft") || "",
+    maxSqft: sp.get("maxSqft") || "",
+    sort: sp.get("sort") || "listDate",
+    openHouses: sp.get("openHouses") || "",
+  };
+}
+
 function ListingsContent() {
+  const initial = useInitialFilters();
   const [listings, setListings] = useState<PropertyCardListing[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 24, total: 0, totalPages: 0 });
-  const [filters, setFilters] = useState<FilterValues>(INITIAL_FILTERS);
+  const [filters, setFilters] = useState<FilterValues>(initial);
   const [view, setView] = useState<ViewMode>("list");
   const [loading, setLoading] = useState(true);
   const [mapBounds, setMapBounds] = useState<string | null>(null);
@@ -106,6 +126,8 @@ function ListingsContent() {
       if (f.neighbourhood) params.set("neighbourhood", f.neighbourhood);
       if (f.minSqft) params.set("minSqft", f.minSqft);
       if (f.maxSqft) params.set("maxSqft", f.maxSqft);
+
+      if (f.openHouses === "true") params.set("openHouses", "true");
 
       if (f.sort.includes("-")) {
         const [field, dir] = f.sort.split("-");

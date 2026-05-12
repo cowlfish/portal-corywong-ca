@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ComplianceFooter from "@/components/ComplianceFooter";
+import SearchBar from "@/components/listings/SearchBar";
 
 export default function Home() {
   return (
@@ -31,26 +32,35 @@ export default function Home() {
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4">
-        <div className="max-w-2xl text-center">
+        <div className="max-w-2xl w-full text-center">
           <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 tracking-tight">
             Your Real Estate Journey,<br />Organized
           </h1>
           <p className="mt-4 text-lg text-slate-500 max-w-lg mx-auto">
-            Search properties, save your favorites, schedule tours, and stay updated
-            with alerts — all in one secure portal.
+            Search Toronto &amp; GTA properties from the MLS&reg; — save favourites,
+            schedule tours, and get instant alerts.
           </p>
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/listings"
-              className="px-6 py-3 bg-slate-900 text-white rounded-md font-medium hover:bg-slate-800 transition-colors"
-            >
-              Search Properties
+
+          <div className="mt-8 max-w-xl mx-auto">
+            <SearchBar variant="hero" />
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-sm text-slate-400">
+            <span>Popular:</span>
+            <Link href="/listings?city=Toronto" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">
+              Toronto
             </Link>
-            <Link
-              href="/register"
-              className="px-6 py-3 border border-slate-300 text-slate-700 rounded-md font-medium hover:bg-white transition-colors"
-            >
-              Get Started
+            <Link href="/listings?city=Mississauga" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">
+              Mississauga
+            </Link>
+            <Link href="/listings?city=Brampton" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">
+              Brampton
+            </Link>
+            <Link href="/listings?propertyType=Condo+Apt" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">
+              Condos
+            </Link>
+            <Link href="/listings?propertyType=Detached" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">
+              Detached
             </Link>
           </div>
 

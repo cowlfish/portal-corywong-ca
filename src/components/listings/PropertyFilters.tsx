@@ -14,6 +14,7 @@ export interface FilterValues {
   minSqft: string;
   maxSqft: string;
   sort: string;
+  openHouses: string;
 }
 
 const INITIAL_FILTERS: FilterValues = {
@@ -28,6 +29,7 @@ const INITIAL_FILTERS: FilterValues = {
   minSqft: "",
   maxSqft: "",
   sort: "listDate",
+  openHouses: "",
 };
 
 const PROPERTY_TYPES = [
@@ -46,8 +48,16 @@ const SORT_OPTIONS = [
   { value: "listDate", label: "Newest" },
   { value: "listPrice-asc", label: "Price: Low to High" },
   { value: "listPrice-desc", label: "Price: High to Low" },
+  { value: "daysOnMarket-asc", label: "Days on Market" },
   { value: "bedrooms", label: "Bedrooms" },
   { value: "sqft", label: "Square Feet" },
+];
+
+const PRICE_PRESETS = [
+  { label: "Under $500K", min: "", max: "500000" },
+  { label: "$500K–$1M", min: "500000", max: "1000000" },
+  { label: "$1M–$2M", min: "1000000", max: "2000000" },
+  { label: "$2M+", min: "2000000", max: "" },
 ];
 
 interface Props {
@@ -75,6 +85,28 @@ export default function PropertyFilters({ filters, onApply, total }: Props) {
   function handleReset() {
     setLocal(INITIAL_FILTERS);
     onApply(INITIAL_FILTERS);
+  }
+
+  function applyChip(patch: Partial<FilterValues>) {
+    const next = { ...local, ...patch };
+    setLocal(next);
+    onApply(next);
+  }
+
+  function isChipActive(field: keyof FilterValues, value: string): boolean {
+    return local[field] === value;
+  }
+
+  function isPriceActive(min: string, max: string): boolean {
+    return local.minPrice === min && local.maxPrice === max;
+  }
+
+  function togglePriceChip(min: string, max: string) {
+    if (isPriceActive(min, max)) {
+      applyChip({ minPrice: "", maxPrice: "" });
+    } else {
+      applyChip({ minPrice: min, maxPrice: max });
+    }
   }
 
   return (
@@ -115,6 +147,65 @@ export default function PropertyFilters({ filters, onApply, total }: Props) {
           className="px-4 py-2 border border-slate-300 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors"
         >
           {expanded ? "Less Filters" : "More Filters"}
+        </button>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {PRICE_PRESETS.map((p) => (
+          <button
+            key={p.label}
+            type="button"
+            onClick={() => togglePriceChip(p.min, p.max)}
+            className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+              isPriceActive(p.min, p.max)
+                ? "bg-slate-900 text-white border-slate-900"
+                : "bg-white text-slate-600 border-slate-300 hover:border-slate-400"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+        <span className="border-l border-slate-200 mx-1" />
+        {[1, 2, 3, 4].map((n) => (
+          <button
+            key={`bed-${n}`}
+            type="button"
+            onClick={() => applyChip({ beds: isChipActive("beds", String(n)) ? "" : String(n) })}
+            className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+              isChipActive("beds", String(n))
+                ? "bg-slate-900 text-white border-slate-900"
+                : "bg-white text-slate-600 border-slate-300 hover:border-slate-400"
+            }`}
+          >
+            {n}+ Beds
+          </button>
+        ))}
+        <span className="border-l border-slate-200 mx-1" />
+        {["Detached", "Condo Apt", "Semi-Detached", "Att/Row/Twnhouse"].map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => applyChip({ propertyType: isChipActive("propertyType", t) ? "" : t })}
+            className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+              isChipActive("propertyType", t)
+                ? "bg-slate-900 text-white border-slate-900"
+                : "bg-white text-slate-600 border-slate-300 hover:border-slate-400"
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+        <span className="border-l border-slate-200 mx-1" />
+        <button
+          type="button"
+          onClick={() => applyChip({ openHouses: local.openHouses === "true" ? "" : "true" })}
+          className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+            local.openHouses === "true"
+              ? "bg-slate-900 text-white border-slate-900"
+              : "bg-white text-slate-600 border-slate-300 hover:border-slate-400"
+          }`}
+        >
+          Open Houses
         </button>
       </div>
 

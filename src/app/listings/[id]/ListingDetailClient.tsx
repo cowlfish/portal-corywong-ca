@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import PhotoCarousel from "@/components/listings/PhotoCarousel";
 import IdxDisclaimer from "@/components/listings/IdxDisclaimer";
 
@@ -129,6 +131,42 @@ function Spec({ label, value }: { label: string; value: string | number | null |
       <span className="text-sm text-slate-500">{label}</span>
       <span className="text-sm font-medium text-slate-900">{value}</span>
     </div>
+  );
+}
+
+function SaveToListButton({ mlsNumber }: { mlsNumber: string }) {
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    try {
+      const favs: string[] = JSON.parse(localStorage.getItem("cw_saved_listings") || "[]");
+      setSaved(favs.includes(mlsNumber));
+    } catch { /* ignore */ }
+  }, [mlsNumber]);
+
+  function toggle() {
+    try {
+      const favs: string[] = JSON.parse(localStorage.getItem("cw_saved_listings") || "[]");
+      const next = saved ? favs.filter((f) => f !== mlsNumber) : [...favs, mlsNumber];
+      localStorage.setItem("cw_saved_listings", JSON.stringify(next));
+      setSaved(!saved);
+    } catch { /* ignore */ }
+  }
+
+  return (
+    <button
+      onClick={toggle}
+      className={`w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-md border transition-colors ${
+        saved
+          ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+      }`}
+    >
+      <svg className="w-5 h-5" fill={saved ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+      </svg>
+      {saved ? "Saved to List" : "Save to List"}
+    </button>
   );
 }
 
@@ -282,6 +320,33 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
           {l.priceHistory.length > 0 && (
             <div>
               <h2 className="text-lg font-semibold text-slate-900 mb-3">Price History</h2>
+              {l.priceHistory.length >= 2 && (
+                <div className="h-48 mb-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={[...l.priceHistory]
+                        .reverse()
+                        .map((ph) => ({
+                          date: new Date(ph.changeDate).toLocaleDateString("en-CA", { month: "short", day: "numeric" }),
+                          price: typeof ph.newPrice === "string" ? parseFloat(ph.newPrice) : ph.newPrice,
+                        }))}
+                      margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
+                    >
+                      <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                      <YAxis
+                        tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}K`}
+                        tick={{ fontSize: 12 }}
+                        width={60}
+                      />
+                      <Tooltip
+                        formatter={(value) => [formatPrice(Number(value)), "Price"]}
+                        labelStyle={{ fontWeight: 600 }}
+                      />
+                      <Line type="monotone" dataKey="price" stroke="#0f172a" strokeWidth={2} dot={{ r: 4 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
               <div className="space-y-1">
                 {l.priceHistory.map((ph) => (
                   <div key={ph.id} className="flex items-center gap-4 text-sm py-1.5 border-b border-slate-100">
@@ -321,36 +386,50 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-lg p-6 sticky top-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Contact Agent</h2>
-            <p className="text-sm text-slate-600 mb-4">
-              Interested in this property? Contact Cory Wong for more information or to schedule a viewing.
-            </p>
-            <a
-              href="mailto:cory@corywong.ca?subject=Inquiry%20about%20MLS%20listing%20"
-              className="block w-full text-center px-4 py-3 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors"
+          <div className="bg-white border border-slate-200 rounded-lg p-6 sticky top-6 space-y-4">
+            <button
+              onClick={() => {
+                const mailto = `mailto:cory@corywong.ca?subject=${encodeURIComponent(`Tour Request — MLS® ${l.mlsNumber}`)}&body=${encodeURIComponent(`Hi Cory,\n\nI'd like to schedule a tour for the property at ${address}, ${l.city || ""}.\n\nPlease let me know available times.\n\nThank you!`)}`;
+                window.location.href = mailto;
+              }}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors"
             >
-              Email Cory Wong
-            </a>
-            <a
-              href="tel:+1-416-555-0100"
-              className="mt-3 block w-full text-center px-4 py-3 border border-slate-300 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors"
-            >
-              Call: (416) 555-0100
-            </a>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Request a Tour
+            </button>
+
+            <SaveToListButton mlsNumber={l.mlsNumber} />
+
+            <div className="border-t border-slate-200 pt-4">
+              <h3 className="text-sm font-medium text-slate-900 mb-3">Contact Agent</h3>
+              <a
+                href={`mailto:cory@corywong.ca?subject=${encodeURIComponent(`Inquiry — MLS® ${l.mlsNumber}`)}`}
+                className="block w-full text-center px-4 py-2.5 border border-slate-300 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors"
+              >
+                Email Cory Wong
+              </a>
+              <a
+                href="tel:+1-416-555-0100"
+                className="mt-2 block w-full text-center px-4 py-2.5 border border-slate-300 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors"
+              >
+                Call: (416) 555-0100
+              </a>
+            </div>
 
             {l.virtualTourUrl && (
               <a
                 href={l.virtualTourUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 block w-full text-center px-4 py-3 border border-blue-300 text-blue-700 text-sm font-medium rounded-md hover:bg-blue-50 transition-colors"
+                className="block w-full text-center px-4 py-2.5 border border-blue-300 text-blue-700 text-sm font-medium rounded-md hover:bg-blue-50 transition-colors"
               >
                 Virtual Tour
               </a>
             )}
 
-            <div className="mt-6 pt-4 border-t border-slate-200">
+            <div className="border-t border-slate-200 pt-4">
               <h3 className="text-sm font-medium text-slate-900 mb-2">Listing Details</h3>
               <div className="space-y-1 text-xs text-slate-500">
                 <p>MLS&reg; {l.mlsNumber}</p>

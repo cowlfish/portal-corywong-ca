@@ -62,6 +62,11 @@ export async function GET(request: NextRequest) {
     ];
   }
 
+  const openHouses = sp.get("openHouses");
+  if (openHouses === "true") {
+    where.openHouses = { some: { startDate: { gte: new Date() } } };
+  }
+
   const bounds = sp.get("bounds");
   if (bounds) {
     const [swLat, swLng, neLat, neLng] = bounds.split(",").map(Number);

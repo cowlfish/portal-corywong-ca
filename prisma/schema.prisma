@@ -19,8 +19,8 @@ model MlsListing {
   boardId    String? @map("board_id")
 
   // Status
-  status          MlsListingStatus @default(ACTIVE)
-  statusChangeAt  DateTime?        @map("status_change_at")
+  status         MlsListingStatus @default(ACTIVE)
+  statusChangeAt DateTime?        @map("status_change_at")
 
   // Pricing
   listPrice     Decimal  @map("list_price") @db.Decimal(12, 2)
@@ -52,21 +52,21 @@ model MlsListing {
   longitude Decimal? @db.Decimal(10, 7)
 
   // Property details
-  bedrooms       Int?
-  bedroomsPlus   Int?     @map("bedrooms_plus")
-  bathrooms      Int?
-  bathroomsHalf  Int?     @map("bathrooms_half")
-  sqft           Decimal? @db.Decimal(10, 2)
-  sqftRangeMin   Decimal? @map("sqft_range_min") @db.Decimal(10, 2)
-  sqftRangeMax   Decimal? @map("sqft_range_max") @db.Decimal(10, 2)
-  lotSizeSqft    Decimal? @map("lot_size_sqft") @db.Decimal(12, 2)
-  lotFrontage    Decimal? @map("lot_frontage") @db.Decimal(8, 2)
-  lotDepth       Decimal? @map("lot_depth") @db.Decimal(8, 2)
-  yearBuilt      Int?     @map("year_built")
-  stories        Decimal? @db.Decimal(4, 1)
-  parkingSpaces  Int?     @map("parking_spaces")
-  garageType     String?  @map("garage_type")
-  garageSpaces   Int?     @map("garage_spaces")
+  bedrooms      Int?
+  bedroomsPlus  Int?     @map("bedrooms_plus")
+  bathrooms     Int?
+  bathroomsHalf Int?     @map("bathrooms_half")
+  sqft          Decimal? @db.Decimal(10, 2)
+  sqftRangeMin  Decimal? @map("sqft_range_min") @db.Decimal(10, 2)
+  sqftRangeMax  Decimal? @map("sqft_range_max") @db.Decimal(10, 2)
+  lotSizeSqft   Decimal? @map("lot_size_sqft") @db.Decimal(12, 2)
+  lotFrontage   Decimal? @map("lot_frontage") @db.Decimal(8, 2)
+  lotDepth      Decimal? @map("lot_depth") @db.Decimal(8, 2)
+  yearBuilt     Int?     @map("year_built")
+  stories       Decimal? @db.Decimal(4, 1)
+  parkingSpaces Int?     @map("parking_spaces")
+  garageType    String?  @map("garage_type")
+  garageSpaces  Int?     @map("garage_spaces")
 
   // Condo-specific (common in TRREB/Toronto)
   maintenanceFee Decimal? @map("maintenance_fee") @db.Decimal(10, 2)
@@ -76,14 +76,14 @@ model MlsListing {
   locker         String?
 
   // Listing details
-  listDate         DateTime? @map("list_date")
-  soldDate         DateTime? @map("sold_date")
-  expiryDate       DateTime? @map("expiry_date")
-  daysOnMarket     Int?      @map("days_on_market")
-  virtualTourUrl   String?   @map("virtual_tour_url")
-  publicRemarks    String?   @map("public_remarks") @db.Text
-  extrasRemarks    String?   @map("extras_remarks") @db.Text
-  featuresRemarks  String?   @map("features_remarks") @db.Text
+  listDate        DateTime? @map("list_date")
+  soldDate        DateTime? @map("sold_date")
+  expiryDate      DateTime? @map("expiry_date")
+  daysOnMarket    Int?      @map("days_on_market")
+  virtualTourUrl  String?   @map("virtual_tour_url")
+  publicRemarks   String?   @map("public_remarks") @db.Text
+  extrasRemarks   String?   @map("extras_remarks") @db.Text
+  featuresRemarks String?   @map("features_remarks") @db.Text
 
   // Tax & assessment
   taxAmount     Decimal? @map("tax_amount") @db.Decimal(10, 2)
@@ -91,21 +91,21 @@ model MlsListing {
   assessedValue Decimal? @map("assessed_value") @db.Decimal(12, 2)
 
   // Agent / office
-  listAgentName    String? @map("list_agent_name")
-  listAgentId      String? @map("list_agent_id")
-  listOfficeName   String? @map("list_office_name")
-  listOfficeId     String? @map("list_office_id")
-  coListAgentName  String? @map("co_list_agent_name")
-  coListAgentId    String? @map("co_list_agent_id")
+  listAgentName   String? @map("list_agent_name")
+  listAgentId     String? @map("list_agent_id")
+  listOfficeName  String? @map("list_office_name")
+  listOfficeId    String? @map("list_office_id")
+  coListAgentName String? @map("co_list_agent_name")
+  coListAgentId   String? @map("co_list_agent_id")
 
   // Sync metadata & AMPRE change-tracking timestamps
-  feedSourceId            String?   @map("feed_source_id")
-  feedUpdatedAt           DateTime  @map("feed_updated_at")
-  majorChangeTimestamp    DateTime? @map("major_change_timestamp")
-  photosChangeTimestamp   DateTime? @map("photos_change_timestamp")
+  feedSourceId             String?   @map("feed_source_id")
+  feedUpdatedAt            DateTime  @map("feed_updated_at")
+  majorChangeTimestamp     DateTime? @map("major_change_timestamp")
+  photosChangeTimestamp    DateTime? @map("photos_change_timestamp")
   documentsChangeTimestamp DateTime? @map("documents_change_timestamp")
-  syncedAt                DateTime  @default(now()) @map("synced_at")
-  rawPayload              Json?     @map("raw_payload")
+  syncedAt                 DateTime  @default(now()) @map("synced_at")
+  rawPayload               Json?     @map("raw_payload")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -117,6 +117,8 @@ model MlsListing {
   priceHistory   MlsPriceHistory[]
   favorites      Favorite[]
   propertyAlerts PropertyAlert[]
+  tourStops      TourStop[]
+  cmaComps       CmaComp[]
 
   @@index([status])
   @@index([city, status])
@@ -142,14 +144,14 @@ enum MlsListingStatus {
 }
 
 model MlsListingPhoto {
-  id          String @id @default(cuid())
-  listingId   String @map("listing_id")
-  photoUrl    String @map("photo_url") @db.Text
-  displayOrder Int   @default(0) @map("display_order")
-  caption     String? @db.Text
-  mediaType   String? @map("media_type")
-  width       Int?
-  height      Int?
+  id           String  @id @default(cuid())
+  listingId    String  @map("listing_id")
+  photoUrl     String  @map("photo_url") @db.Text
+  displayOrder Int     @default(0) @map("display_order")
+  caption      String? @db.Text
+  mediaType    String? @map("media_type")
+  width        Int?
+  height       Int?
 
   syncedAt  DateTime @default(now()) @map("synced_at")
   createdAt DateTime @default(now()) @map("created_at")
@@ -161,14 +163,14 @@ model MlsListingPhoto {
 }
 
 model MlsPropertyRoom {
-  id             String  @id @default(cuid())
-  listingId      String  @map("listing_id")
-  roomKey        String  @map("room_key")
-  roomType       String? @map("room_type")
-  roomLevel      String? @map("room_level")
-  roomDimensions String? @map("room_dimensions")
-  roomArea       Decimal? @map("room_area") @db.Decimal(10, 2)
-  roomDescription String? @map("room_description") @db.Text
+  id              String   @id @default(cuid())
+  listingId       String   @map("listing_id")
+  roomKey         String   @map("room_key")
+  roomType        String?  @map("room_type")
+  roomLevel       String?  @map("room_level")
+  roomDimensions  String?  @map("room_dimensions")
+  roomArea        Decimal? @map("room_area") @db.Decimal(10, 2)
+  roomDescription String?  @map("room_description") @db.Text
 
   syncedAt  DateTime @default(now()) @map("synced_at")
   createdAt DateTime @default(now()) @map("created_at")
@@ -199,12 +201,12 @@ model MlsOpenHouse {
 }
 
 model MlsPriceHistory {
-  id        String   @id @default(cuid())
-  listingId String   @map("listing_id")
+  id         String   @id @default(cuid())
+  listingId  String   @map("listing_id")
   changeDate DateTime @map("change_date")
-  oldPrice  Decimal  @map("old_price") @db.Decimal(12, 2)
-  newPrice  Decimal  @map("new_price") @db.Decimal(12, 2)
-  changeType String? @map("change_type")
+  oldPrice   Decimal  @map("old_price") @db.Decimal(12, 2)
+  newPrice   Decimal  @map("new_price") @db.Decimal(12, 2)
+  changeType String?  @map("change_type")
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -221,11 +223,11 @@ model MlsSyncRun {
   status      MlsSyncStatus @default(RUNNING)
   syncType    String        @map("sync_type")
 
-  totalRecords   Int @default(0) @map("total_records")
-  insertedCount  Int @default(0) @map("inserted_count")
-  updatedCount   Int @default(0) @map("updated_count")
-  deletedCount   Int @default(0) @map("deleted_count")
-  errorCount     Int @default(0) @map("error_count")
+  totalRecords  Int @default(0) @map("total_records")
+  insertedCount Int @default(0) @map("inserted_count")
+  updatedCount  Int @default(0) @map("updated_count")
+  deletedCount  Int @default(0) @map("deleted_count")
+  errorCount    Int @default(0) @map("error_count")
 
   errorDetails Json?   @map("error_details")
   cursor       String?
@@ -247,22 +249,53 @@ enum MlsSyncStatus {
   @@map("mls_sync_status")
 }
 
+// ─── Market Snapshots ──────────────────────────────────────────────
+// Point-in-time market metrics. Accumulates over time for Phase 2 trend charts.
+
+model MarketSnapshot {
+  id           String   @id @default(cuid())
+  snapshotDate DateTime @map("snapshot_date")
+
+  filters Json?
+
+  activeCount        Int      @map("active_count")
+  avgListPrice       Decimal  @map("avg_list_price") @db.Decimal(12, 2)
+  medianListPrice    Decimal  @map("median_list_price") @db.Decimal(12, 2)
+  avgPricePerSqft    Decimal? @map("avg_price_per_sqft") @db.Decimal(10, 2)
+  avgDaysOnMarket    Decimal? @map("avg_days_on_market") @db.Decimal(8, 1)
+  medianDaysOnMarket Int?     @map("median_days_on_market")
+
+  priceDistribution  Json? @map("price_distribution")
+  domDistribution    Json? @map("dom_distribution")
+  propertyTypeCounts Json? @map("property_type_counts")
+  areaCounts         Json? @map("area_counts")
+
+  shareToken String? @unique @map("share_token")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdById String?  @map("created_by_id")
+
+  @@index([snapshotDate])
+  @@index([shareToken])
+  @@map("market_snapshots")
+}
+
 // ─── Client Portal ─────────────────────────────────────────────────
 // Auth, saved searches, favorites, alerts, and transaction viewing.
 // Shared auth layer used by both client portal (CAS-40) and transaction portal (CAS-39).
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  passwordHash  String   @map("password_hash")
-  firstName     String   @map("first_name")
-  lastName      String   @map("last_name")
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  firstName     String    @map("first_name")
+  lastName      String    @map("last_name")
   phone         String?
-  role          UserRole @default(CLIENT)
-  mfaEnabled    Boolean  @default(false) @map("mfa_enabled")
-  mfaSecret     String?  @map("mfa_secret")
-  emailVerified Boolean  @default(false) @map("email_verified")
-  isActive      Boolean  @default(true) @map("is_active")
+  role          UserRole  @default(CLIENT)
+  mfaEnabled    Boolean   @default(false) @map("mfa_enabled")
+  mfaSecret     String?   @map("mfa_secret")
+  emailVerified Boolean   @default(false) @map("email_verified")
+  isActive      Boolean   @default(true) @map("is_active")
   lastLoginAt   DateTime? @map("last_login_at")
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -274,6 +307,7 @@ model User {
   transactions   TransactionClient[]
   sessions       Session[]
   auditLogs      AuditLog[]
+  tours          Tour[]
 
   @@index([email])
   @@index([role])
@@ -314,14 +348,14 @@ model SavedSearch {
   // Search criteria stored as structured JSON
   criteria Json
 
-  alertEnabled  Boolean @default(false) @map("alert_enabled")
+  alertEnabled   Boolean        @default(false) @map("alert_enabled")
   alertFrequency AlertFrequency @default(DAILY) @map("alert_frequency")
-  lastAlertedAt DateTime? @map("last_alerted_at")
+  lastAlertedAt  DateTime?      @map("last_alerted_at")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   propertyAlerts PropertyAlert[]
 
   @@index([userId])
@@ -338,9 +372,9 @@ enum AlertFrequency {
 }
 
 model Favorite {
-  id        String @id @default(cuid())
-  userId    String @map("user_id")
-  listingId String @map("listing_id")
+  id        String  @id @default(cuid())
+  userId    String  @map("user_id")
+  listingId String  @map("listing_id")
   notes     String? @db.Text
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -396,22 +430,22 @@ model Transaction {
   address         String
   mlsNumber       String?           @map("mls_number")
 
-  listPrice       Decimal?  @map("list_price") @db.Decimal(12, 2)
-  salePrice       Decimal?  @map("sale_price") @db.Decimal(12, 2)
-  closingDate     DateTime? @map("closing_date")
-  conditionDate   DateTime? @map("condition_date")
+  listPrice     Decimal?  @map("list_price") @db.Decimal(12, 2)
+  salePrice     Decimal?  @map("sale_price") @db.Decimal(12, 2)
+  closingDate   DateTime? @map("closing_date")
+  conditionDate DateTime? @map("condition_date")
 
-  notes           String?   @db.Text
-  createdByAgentId String?  @map("created_by_agent_id")
+  notes            String? @db.Text
+  createdByAgentId String? @map("created_by_agent_id")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  clients    TransactionClient[]
-  documents  TransactionDocument[]
-  stages     TransactionStage[]
-  forms      TransactionForm[]
-  auditLogs  AuditLog[]
+  clients   TransactionClient[]
+  documents TransactionDocument[]
+  stages    TransactionStage[]
+  forms     TransactionForm[]
+  auditLogs AuditLog[]
 
   @@index([status])
   @@index([transactionType])
@@ -439,9 +473,9 @@ enum TransactionStatus {
 }
 
 model TransactionClient {
-  id            String @id @default(cuid())
-  transactionId String @map("transaction_id")
-  userId        String @map("user_id")
+  id            String                @id @default(cuid())
+  transactionId String                @map("transaction_id")
+  userId        String                @map("user_id")
   role          TransactionClientRole @default(PRIMARY)
 
   addedAt DateTime @default(now()) @map("added_at")
@@ -464,14 +498,14 @@ enum TransactionClientRole {
 }
 
 model TransactionDocument {
-  id            String @id @default(cuid())
-  transactionId String @map("transaction_id")
+  id            String  @id @default(cuid())
+  transactionId String  @map("transaction_id")
   stageId       String? @map("stage_id")
   name          String
   category      String
-  storagePath   String @map("storage_path") @db.Text
-  encryptionIv  String @map("encryption_iv")
-  fileSize      Int?   @map("file_size")
+  storagePath   String  @map("storage_path") @db.Text
+  encryptionIv  String  @map("encryption_iv")
+  fileSize      Int?    @map("file_size")
   mimeType      String? @map("mime_type")
   uploadedById  String? @map("uploaded_by_id")
 
@@ -489,18 +523,18 @@ model TransactionDocument {
 }
 
 model DocumentAccessLink {
-  id          String    @id @default(cuid())
-  documentId  String    @map("document_id")
-  token       String    @unique
-  expiresAt   DateTime  @map("expires_at")
-  revokedAt   DateTime? @map("revoked_at")
-  createdById String    @map("created_by_id")
-  maxDownloads Int?     @map("max_downloads")
-  downloadCount Int     @default(0) @map("download_count")
+  id            String    @id @default(cuid())
+  documentId    String    @map("document_id")
+  token         String    @unique
+  expiresAt     DateTime  @map("expires_at")
+  revokedAt     DateTime? @map("revoked_at")
+  createdById   String    @map("created_by_id")
+  maxDownloads  Int?      @map("max_downloads")
+  downloadCount Int       @default(0) @map("download_count")
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  document  TransactionDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  document TransactionDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([documentId])
@@ -525,15 +559,15 @@ model DocumentAuditLog {
 }
 
 model TransactionStage {
-  id            String @id @default(cuid())
-  transactionId String @map("transaction_id")
+  id            String    @id @default(cuid())
+  transactionId String    @map("transaction_id")
   name          String
-  description   String? @db.Text
-  displayOrder  Int    @default(0) @map("display_order")
-  isComplete    Boolean @default(false) @map("is_complete")
+  description   String?   @db.Text
+  displayOrder  Int       @default(0) @map("display_order")
+  isComplete    Boolean   @default(false) @map("is_complete")
   completedAt   DateTime? @map("completed_at")
   dueDate       DateTime? @map("due_date")
-  notes         String? @db.Text
+  notes         String?   @db.Text
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -578,8 +612,8 @@ model TransactionForm {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  transaction Transaction        @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  stage       TransactionStage?  @relation(fields: [stageId], references: [id])
+  transaction Transaction       @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  stage       TransactionStage? @relation(fields: [stageId], references: [id])
   submissions FormSubmission[]
 
   @@index([transactionId])
@@ -622,4 +656,169 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ─── Tour Planning ─────────────────────────────────────────────────
+// Showing tour planning and route optimization for agents.
+
+model Tour {
+  id          String     @id @default(cuid())
+  userId      String     @map("user_id")
+  title       String
+  clientName  String?    @map("client_name")
+  clientEmail String?    @map("client_email")
+  clientPhone String?    @map("client_phone")
+  tourDate    DateTime?  @map("tour_date")
+  notes       String?    @db.Text
+  shareToken  String?    @unique @map("share_token")
+  status      TourStatus @default(DRAFT)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stops TourStop[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([shareToken])
+  @@map("tours")
+}
+
+enum TourStatus {
+  DRAFT
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+
+  @@map("tour_status")
+}
+
+model TourStop {
+  id        String  @id @default(cuid())
+  tourId    String  @map("tour_id")
+  listingId String? @map("listing_id")
+
+  address    String
+  city       String?
+  province   String?
+  postalCode String?  @map("postal_code")
+  latitude   Decimal? @db.Decimal(10, 7)
+  longitude  Decimal? @db.Decimal(10, 7)
+
+  sortOrder     Int       @default(0) @map("sort_order")
+  scheduledTime DateTime? @map("scheduled_time")
+  duration      Int       @default(30)
+  notes         String?   @db.Text
+
+  listPrice    Decimal? @map("list_price") @db.Decimal(12, 2)
+  bedrooms     Int?
+  bathrooms    Int?
+  propertyType String?  @map("property_type")
+  photoUrl     String?  @map("photo_url") @db.Text
+  mlsNumber    String?  @map("mls_number")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tour    Tour        @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  listing MlsListing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  @@index([tourId, sortOrder])
+  @@index([listingId])
+  @@map("tour_stops")
+}
+
+// ─── CMA (Comparative Market Analysis) ────────────────────────────
+// Phase 1: active comps from feed + manual sold-comp entry.
+// Phase 2: automated sold comp pull when VOW is active.
+
+model CmaReport {
+  id              String @id @default(cuid())
+  createdByUserId String @map("created_by_user_id")
+  name            String
+
+  subjectAddress      String?  @map("subject_address")
+  subjectPropertyType String?  @map("subject_property_type")
+  subjectBedrooms     Int?     @map("subject_bedrooms")
+  subjectBathrooms    Int?     @map("subject_bathrooms")
+  subjectSqft         Decimal? @map("subject_sqft") @db.Decimal(10, 2)
+  subjectListPrice    Decimal? @map("subject_list_price") @db.Decimal(12, 2)
+
+  notes  String?   @db.Text
+  status CmaStatus @default(DRAFT)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  comps     CmaComp[]
+  soldComps CmaSoldComp[]
+
+  @@index([createdByUserId])
+  @@index([status])
+  @@map("cma_reports")
+}
+
+enum CmaStatus {
+  DRAFT
+  FINALIZED
+
+  @@map("cma_status")
+}
+
+model CmaComp {
+  id          String  @id @default(cuid())
+  cmaReportId String  @map("cma_report_id")
+  listingId   String  @map("listing_id")
+  notes       String? @db.Text
+  adjustments Json?
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  report  CmaReport  @relation(fields: [cmaReportId], references: [id], onDelete: Cascade)
+  listing MlsListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([cmaReportId, listingId])
+  @@index([cmaReportId])
+  @@map("cma_comps")
+}
+
+model CmaSoldComp {
+  id          String @id @default(cuid())
+  cmaReportId String @map("cma_report_id")
+
+  address      String
+  propertyType String?  @map("property_type")
+  bedrooms     Int?
+  bathrooms    Int?
+  sqft         Decimal? @db.Decimal(10, 2)
+  lotSizeSqft  Decimal? @map("lot_size_sqft") @db.Decimal(12, 2)
+
+  soldPrice    Decimal  @map("sold_price") @db.Decimal(12, 2)
+  soldDate     DateTime @map("sold_date")
+  listPrice    Decimal? @map("list_price") @db.Decimal(12, 2)
+  daysOnMarket Int?     @map("days_on_market")
+
+  notes       String? @db.Text
+  adjustments Json?
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  source    CmaSoldCompSource @default(MANUAL)
+  listingId String?           @map("listing_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  report CmaReport @relation(fields: [cmaReportId], references: [id], onDelete: Cascade)
+
+  @@index([cmaReportId])
+  @@map("cma_sold_comps")
+}
+
+enum CmaSoldCompSource {
+  MANUAL
+  FEED
+
+  @@map("cma_sold_comp_source")
 }

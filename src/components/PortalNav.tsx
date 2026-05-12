@@ -6,9 +6,12 @@ import { useState } from "react";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
+  { href: "/listings", label: "Property Search", icon: "🏘️" },
   { href: "/searches", label: "Saved Searches", icon: "🔍" },
   { href: "/favorites", label: "Favorites", icon: "❤️" },
   { href: "/alerts", label: "Alerts", icon: "🔔" },
+  { href: "/market-snapshot", label: "Market", icon: "📊" },
+  { href: "/tours", label: "Tours", icon: "🗺️" },
   { href: "/transactions", label: "Transactions", icon: "📋" },
 ];
 

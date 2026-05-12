@@ -5,8 +5,11 @@ const PUBLIC_PATHS = ["/", "/login", "/register", "/api/auth/login", "/api/auth/
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.some((p) => pathname === p)) return true;
   if (pathname.startsWith("/_next")) return true;
-  // Time-limited document access links are publicly accessible via token
+  if (pathname.startsWith("/listings")) return true;
+  if (pathname.startsWith("/api/listings")) return true;
   if (pathname.startsWith("/api/documents/access/")) return true;
+  if (pathname.startsWith("/tours/share/")) return true;
+  if (pathname.startsWith("/api/tours/share/")) return true;
   return false;
 }
 

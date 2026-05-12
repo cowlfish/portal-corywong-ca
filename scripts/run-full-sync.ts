@@ -13,6 +13,8 @@ const STATUS_MAP: Record<string, string> = {
   Deleted: "DELETED",
 };
 
+const maxBatches = process.env.MAX_SYNC_BATCHES ? parseInt(process.env.MAX_SYNC_BATCHES, 10) : Infinity;
+
 const url = process.env.PORTAL_DATABASE_URL!;
 if (!url) {
   console.error("PORTAL_DATABASE_URL is not set");
@@ -138,7 +140,22 @@ async function upsertListing(listing: MlsFeedListing): Promise<"inserted" | "upd
   }
 }
 
+async function connectWithRetry(maxRetries = 3): Promise<void> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      return;
+    } catch (err) {
+      console.log(`[sync] Connection attempt ${i + 1}/${maxRetries} failed, retrying in 3s...`);
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+  throw new Error("Could not connect to database after retries");
+}
+
 async function main() {
+  await connectWithRetry();
+
   const provider = new AmpreResoProvider();
   await provider.initialize({
     apiUrl: "https://query.ampre.ca/odata",
@@ -223,6 +240,11 @@ async function main() {
 
       hasMore = rows.length === 1000;
 
+      if (batchNum >= maxBatches) {
+        console.log(`[sync] Reached MAX_SYNC_BATCHES=${maxBatches}, checkpointing and exiting cleanly`);
+        hasMore = false;
+      }
+
       const elapsed = ((Date.now() - batchStart) / 1000).toFixed(1);
       console.log(`[sync] Batch ${batchNum}: ${listings.length} records in ${elapsed}s | Total: ${totalRecords} inserted=${inserted} updated=${updated} errors=${errors}`);
 
@@ -236,16 +258,20 @@ async function main() {
       }
     }
 
-    try {
-      await prisma.mlsSyncRun.update({
-        where: { id: syncRunId },
-        data: { status: "COMPLETED", completedAt: new Date(), totalRecords, insertedCount: inserted, updatedCount: updated, errorCount: errors, cursor: lastCursorTs, cursorKey: lastCursorKey },
-      });
-    } catch {
-      console.warn(`[sync] Could not mark sync run as COMPLETED`);
+    const reachedBatchLimit = batchNum >= maxBatches;
+    if (reachedBatchLimit) {
+      console.log(`[sync] PAUSED after ${batchNum} batches: ${totalRecords} records (${inserted} new, ${updated} updated, ${errors} errors) — run stays RUNNING for next resume`);
+    } else {
+      try {
+        await prisma.mlsSyncRun.update({
+          where: { id: syncRunId },
+          data: { status: "COMPLETED", completedAt: new Date(), totalRecords, insertedCount: inserted, updatedCount: updated, errorCount: errors, cursor: lastCursorTs, cursorKey: lastCursorKey },
+        });
+      } catch {
+        console.warn(`[sync] Could not mark sync run as COMPLETED`);
+      }
+      console.log(`[sync] COMPLETED: ${totalRecords} records (${inserted} new, ${updated} updated, ${errors} errors)`);
     }
-
-    console.log(`[sync] COMPLETED: ${totalRecords} records (${inserted} new, ${updated} updated, ${errors} errors)`);
   } catch (err) {
     try {
       await prisma.mlsSyncRun.update({

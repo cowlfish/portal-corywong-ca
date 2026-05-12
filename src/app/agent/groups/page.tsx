@@ -170,11 +170,39 @@ export default function AgentGroupsPage() {
       )}
 
       {loading ? (
-        <div className="text-slate-400">Loading groups...</div>
+        <div className="space-y-4">
+          {[1, 2].map((i) => (
+            <div key={i} className="bg-white rounded-lg border border-slate-200 p-5 animate-pulse">
+              <div className="flex items-center gap-4">
+                <div>
+                  <div className="h-5 bg-slate-200 rounded w-32 mb-2" />
+                  <div className="h-4 bg-slate-200 rounded w-20" />
+                </div>
+                <div className="flex -space-x-2 ml-4">
+                  {[1, 2, 3].map((j) => (
+                    <div key={j} className="w-8 h-8 rounded-full bg-slate-200 border-2 border-white" />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : groups.length === 0 ? (
         <div className="bg-white rounded-lg border border-slate-200 p-12 text-center">
-          <div className="text-slate-400 text-lg">No groups yet</div>
-          <p className="text-slate-400 text-sm mt-1">Create a group to organize your clients</p>
+          <svg className="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <h2 className="text-lg font-semibold text-slate-900 mb-2">No groups yet</h2>
+          <p className="text-slate-500 max-w-sm mx-auto mb-6">
+            Create groups to organize your clients and share targeted listing
+            comments with specific audiences.
+          </p>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="px-4 py-2 rounded-md text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+          >
+            Create Your First Group
+          </button>
         </div>
       ) : (
         <div className="space-y-4">

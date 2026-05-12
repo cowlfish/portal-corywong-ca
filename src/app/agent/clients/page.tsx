@@ -66,9 +66,30 @@ export default function AgentClientsPage() {
       </div>
 
       {loading ? (
-        <div className="text-slate-400">Loading clients...</div>
+        <div className="grid gap-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-lg border border-slate-200 p-4 animate-pulse">
+              <div className="flex items-center gap-4">
+                <div className="h-4 bg-slate-200 rounded w-32" />
+                <div className="h-4 bg-slate-200 rounded w-48" />
+                <div className="h-4 bg-slate-200 rounded w-24" />
+                <div className="h-5 bg-slate-200 rounded-full w-20" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
-        <div className="text-slate-400">No clients found.</div>
+        <div className="bg-white rounded-lg border border-slate-200 p-12 text-center">
+          <svg className="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <h2 className="text-lg font-semibold text-slate-900 mb-2">No clients found</h2>
+          <p className="text-slate-500 max-w-sm mx-auto">
+            {filter === "all"
+              ? "Clients will appear here once they register for your portal."
+              : `No clients with status "${filter.toLowerCase()}" at this time.`}
+          </p>
+        </div>
       ) : (
         <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">

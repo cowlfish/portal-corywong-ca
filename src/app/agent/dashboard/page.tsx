@@ -40,7 +40,14 @@ export default function AgentDashboardPage() {
       </div>
 
       {loading ? (
-        <div className="text-slate-400">Loading stats...</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="p-6 rounded-lg border border-slate-200 animate-pulse">
+              <div className="h-8 bg-slate-200 rounded w-16 mb-2" />
+              <div className="h-5 bg-slate-200 rounded w-28" />
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {cards.map((card) => (

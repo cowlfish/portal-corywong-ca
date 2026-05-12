@@ -95,7 +95,22 @@ export default function SearchesPage() {
   }
 
   if (loading) {
-    return <div className="text-slate-500">Loading searches...</div>;
+    return (
+      <div>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900">Saved Searches</h1>
+          <p className="text-slate-500 mt-1">Save your search criteria and get alerted when new listings match</p>
+        </div>
+        <div className="space-y-3">
+          {[1, 2].map((i) => (
+            <div key={i} className="bg-white rounded-lg border border-slate-200 p-4 animate-pulse">
+              <div className="h-5 bg-slate-200 rounded w-40 mb-2" />
+              <div className="h-4 bg-slate-200 rounded w-64" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -219,8 +234,18 @@ export default function SearchesPage() {
 
       {searches.length === 0 ? (
         <div className="bg-white rounded-lg border border-slate-200 p-12 text-center">
-          <p className="text-slate-500 text-lg">No saved searches yet</p>
-          <p className="text-slate-400 mt-1">Create a search to get notified about new listings</p>
+          <div className="text-4xl mb-4">&#128269;</div>
+          <h2 className="text-lg font-semibold text-slate-900 mb-2">No saved searches yet</h2>
+          <p className="text-slate-500 max-w-sm mx-auto mb-6">
+            Save your search criteria and get notified when new listings match
+            your preferences.
+          </p>
+          <button
+            onClick={() => setShowForm(true)}
+            className="px-4 py-2 bg-slate-900 text-white rounded-md font-medium hover:bg-slate-800 transition-colors"
+          >
+            Create Your First Search
+          </button>
         </div>
       ) : (
         <div className="space-y-3">

@@ -414,10 +414,10 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
                 Email Cory Wong
               </a>
               <a
-                href="tel:+1-416-555-0100"
+                href="tel:+1-416-498-9995"
                 className="mt-2 block w-full text-center px-4 py-2.5 border border-slate-300 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors"
               >
-                Call: (416) 555-0100
+                Call: (416) 498-9995
               </a>
             </div>
 

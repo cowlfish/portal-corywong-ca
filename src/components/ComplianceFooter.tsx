@@ -5,15 +5,14 @@ export default function ComplianceFooter({ className = "" }: { className?: strin
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-3">
         <div>
-          <span className="text-slate-300 font-medium">Cory Wong</span>,
-          Salesperson | Registration #00000000
+          <span className="text-slate-300 font-medium">Cory Wong</span>, Broker
         </div>
         <div>
-          Trustwell Realty Inc., Brokerage | 123 Main Street, Suite 100,
-          Toronto, ON M5V 1A1 | (416) 555-0100
+          Trustwell Realty Inc., Brokerage | 3640 Victoria Park Ave., Suite 300,
+          Toronto, ON M2H 3B2 | (416) 498-9995
         </div>
         <div className="border-t border-slate-700 pt-3">
-          This brokerage and its salespersons are registered with the Real
+          This brokerage and its registrants are registered with the Real
           Estate Council of Ontario (RECO). RECO ensures the protection of
           consumers and the integrity of Ontario&apos;s real estate industry.
           For more information, visit{" "}
@@ -29,9 +28,10 @@ export default function ComplianceFooter({ className = "" }: { className?: strin
         </div>
         <div className="border-t border-slate-700 pt-3">
           MLS&reg;, Multiple Listing Service&reg;, and the associated logos are
-          owned by The Canadian Real Estate Association (CREA) and identify the
-          quality of services provided by real estate professionals who are
-          members of CREA. REALTOR&reg; is a trademark owned by CREA and used to
+          trademarks of The Canadian Real Estate Association (CREA) and identify
+          the quality of services provided by real estate professionals who are
+          members of CREA. REALTOR&reg;, REALTORS&reg;, and the REALTOR&reg;
+          logo are trademarks of CREA, used under license by members of CREA to
           identify real estate professionals who are members of CREA.
         </div>
         <div className="text-slate-500">

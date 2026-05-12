@@ -241,8 +241,8 @@ function ListingsContent() {
         )}
 
         {view === "split" && (
-          <div className="flex gap-6 h-[calc(100vh-320px)] min-h-[500px]">
-            <div className="w-1/2 overflow-y-auto pr-2 space-y-4">
+          <div className="flex flex-col lg:flex-row gap-6 h-auto lg:h-[calc(100vh-320px)] lg:min-h-[500px]">
+            <div className="w-full lg:w-1/2 overflow-y-auto lg:pr-2 space-y-4">
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="bg-white rounded-lg border border-slate-200 overflow-hidden animate-pulse">
@@ -259,7 +259,7 @@ function ListingsContent() {
                 listings.map((l) => <PropertyCard key={l.id} listing={l} />)
               )}
             </div>
-            <div className="w-1/2 rounded-lg overflow-hidden border border-slate-200">
+            <div className="w-full lg:w-1/2 h-[400px] lg:h-auto rounded-lg overflow-hidden border border-slate-200">
               <ListingMap listings={listings} onBoundsChange={handleBoundsChange} />
             </div>
           </div>

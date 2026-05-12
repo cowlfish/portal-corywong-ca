@@ -66,7 +66,7 @@ export default function RegisterPage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label htmlFor="firstName" className="block text-sm font-medium text-slate-700 mb-1">
               First Name
@@ -163,9 +163,18 @@ export default function RegisterPage() {
               className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500"
             />
             <span className="text-xs text-slate-600">
-              I acknowledge that real estate services are provided by a registrant under the
-              Real Estate Council of Ontario (RECO). Information provided through this portal
-              is deemed reliable but not guaranteed. I agree to the terms of service.
+              I have read and agree to the{" "}
+              <Link href="/terms" className="text-slate-900 underline hover:text-slate-700">
+                Terms of Use
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-slate-900 underline hover:text-slate-700">
+                Privacy Policy
+              </Link>
+              . I acknowledge that this portal is operated by Cory Wong, Broker,
+              Trustwell Realty Inc., Brokerage, and is for the exclusive use of
+              invited clients. Creating an account does not create a
+              representation agreement.
             </span>
           </label>
         </div>

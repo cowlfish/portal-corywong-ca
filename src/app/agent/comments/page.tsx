@@ -152,9 +152,29 @@ export default function AgentCommentsPage() {
       </div>
 
       {loading ? (
-        <p className="text-slate-400">Loading comments...</p>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white border border-slate-200 rounded-lg p-4 animate-pulse">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-4 bg-slate-200 rounded w-24" />
+                <div className="h-4 bg-slate-200 rounded-full w-16" />
+              </div>
+              <div className="h-4 bg-slate-200 rounded w-3/4 mb-2" />
+              <div className="h-3 bg-slate-200 rounded w-1/2" />
+            </div>
+          ))}
+        </div>
       ) : comments.length === 0 ? (
-        <p className="text-slate-400">No comments found.</p>
+        <div className="bg-white rounded-lg border border-slate-200 p-12 text-center">
+          <svg className="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          <h2 className="text-lg font-semibold text-slate-900 mb-2">No comments yet</h2>
+          <p className="text-slate-500 max-w-sm mx-auto">
+            Comments on listings will appear here. Clients and agents can leave
+            notes on properties with different visibility levels.
+          </p>
+        </div>
       ) : (
         <div className="space-y-3">
           {comments.map((c) => (

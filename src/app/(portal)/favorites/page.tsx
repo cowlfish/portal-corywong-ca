@@ -46,7 +46,26 @@ export default function FavoritesPage() {
   }
 
   if (loading) {
-    return <div className="text-slate-500">Loading favorites...</div>;
+    return (
+      <div>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900">Favorites</h1>
+          <p className="text-slate-500 mt-1">Properties you&apos;ve added to your shortlist</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-lg border border-slate-200 overflow-hidden animate-pulse">
+              <div className="h-48 bg-slate-200" />
+              <div className="p-4 space-y-3">
+                <div className="h-5 bg-slate-200 rounded w-24" />
+                <div className="h-4 bg-slate-200 rounded w-40" />
+                <div className="h-4 bg-slate-200 rounded w-32" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -58,9 +77,11 @@ export default function FavoritesPage() {
 
       {favorites.length === 0 ? (
         <div className="bg-white rounded-lg border border-slate-200 p-12 text-center">
-          <p className="text-slate-500 text-lg">No favorites yet</p>
-          <p className="text-slate-400 mt-1">
-            Browse listings and add properties to your shortlist
+          <div className="text-4xl mb-4">&#10084;&#65039;</div>
+          <h2 className="text-lg font-semibold text-slate-900 mb-2">No favorites yet</h2>
+          <p className="text-slate-500 max-w-sm mx-auto">
+            Browse listings and save properties to your shortlist to keep track of
+            homes you&apos;re interested in.
           </p>
         </div>
       ) : (

@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/mls-sync",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 0 * * *"
     },
     {
       "path": "/api/cron/generate-alerts",

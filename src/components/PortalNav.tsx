@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/alerts", label: "Alerts", icon: "🔔" },
   { href: "/market-snapshot", label: "Market", icon: "📊" },
   { href: "/tours", label: "Tours", icon: "🗺️" },
+  { href: "/cma", label: "CMA", icon: "📊" },
   { href: "/transactions", label: "Transactions", icon: "📋" },
 ];
 

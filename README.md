@@ -13,6 +13,10 @@ Cloudflare Workers via [OpenNext](https://opennext.js.org/cloudflare).
 | Next cache | R2 bucket `portal-corywong-ca-opennext-cache` |
 | Cron | Cron Triggers in `wrangler.jsonc`; `worker.ts` maps each to its `/api/cron/*` route |
 
+## RECO compliance
+
+See [docs/RECO-COMPLIANCE.md](docs/RECO-COMPLIANCE.md). `npm run build` runs `npm run check:reco` first.
+
 ## Development
 
 ```bash

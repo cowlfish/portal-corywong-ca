@@ -210,7 +210,7 @@ export default function SearchesPage() {
             <div className="flex items-center gap-4 pt-2">
               <label className="flex items-center gap-2">
                 <input type="checkbox" name="alertEnabled" className="rounded border-slate-300" />
-                <span className="text-sm text-slate-700">Email alerts for new matches</span>
+                <span className="text-sm text-slate-700">Portal alerts for new matches (checked daily)</span>
               </label>
               <select
                 name="alertFrequency"

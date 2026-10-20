@@ -165,7 +165,8 @@ export default function SharedTourPage({
 
         {/* Footer */}
         <div className="mt-8 text-center text-xs text-slate-400 print:mt-12">
-          <p>Cory Wong Real Estate</p>
+          <p>Cory Wong, Broker</p>
+          <p>Trustwell Realty Inc., Brokerage | (416) 498-9995</p>
         </div>
       </div>
     </div>

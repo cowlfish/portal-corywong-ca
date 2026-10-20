@@ -5,7 +5,7 @@ import ListingDetailClient from "./ListingDetailClient";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const listing = await prisma.mlsListing.findFirst({
-    where: { OR: [{ id }, { mlsNumber: id }] },
+    where: { OR: [{ id }, { mlsNumber: id }], status: "ACTIVE" },
     select: { mlsNumber: true, streetNumber: true, streetName: true, city: true, listPrice: true, propertyType: true },
   });
 
@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   );
 
   return {
-    title: `${addr}, ${listing.city} — ${price} | Cory Wong Real Estate`,
+    title: `${addr}, ${listing.city} — ${price} | Cory Wong, Broker, Trustwell Realty Inc., Brokerage`,
     description: `${listing.propertyType || "Property"} for sale in ${listing.city}. MLS® ${listing.mlsNumber}. ${price}.`,
   };
 }
@@ -26,7 +26,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const { id } = await params;
 
   const listing = await prisma.mlsListing.findFirst({
-    where: { OR: [{ id }, { mlsNumber: id }] },
+    where: { OR: [{ id }, { mlsNumber: id }], status: "ACTIVE" },
     include: {
       photos: { orderBy: { displayOrder: "asc" } },
       rooms: { orderBy: { roomType: "asc" } },

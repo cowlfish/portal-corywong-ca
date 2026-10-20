@@ -99,7 +99,8 @@ export default function SharedSnapshotPage() {
       <div className="bg-slate-900 text-white py-4">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between">
           <div>
-            <div className="text-lg font-bold">Cory Wong Real Estate</div>
+            <div className="text-lg font-bold">Cory Wong, Broker</div>
+            <div className="text-slate-300 text-sm">Trustwell Realty Inc., Brokerage</div>
             <div className="text-slate-400 text-sm">Market Snapshot</div>
           </div>
           <button
@@ -213,7 +214,7 @@ export default function SharedSnapshotPage() {
         </div>
 
         <div className="text-xs text-slate-400 text-center mt-8 print:mt-4">
-          Prepared by Cory Wong Real Estate — portal.corywong.ca
+          Prepared by Cory Wong, Broker, Trustwell Realty Inc., Brokerage — portal.corywong.ca
         </div>
       </main>
     </div>

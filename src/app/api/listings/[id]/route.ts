@@ -11,6 +11,8 @@ export async function GET(
     const listing = await prisma.mlsListing.findFirst({
       where: {
         OR: [{ id }, { mlsNumber: id }],
+        // Active only: sold/expired listings must not be published (RECO 5.4, TRREB IDX)
+        status: "ACTIVE",
       },
       include: {
         photos: { orderBy: { displayOrder: "asc" } },

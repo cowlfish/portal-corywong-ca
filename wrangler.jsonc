@@ -36,7 +36,7 @@
     "crons": ["*/15 * * * *", "0 12 * * *"]
   },
   "vars": {
-    "NEXT_PUBLIC_APP_NAME": "Cory Wong Real Estate",
+    "NEXT_PUBLIC_APP_NAME": "Cory Wong, Broker",
     "NEXT_PUBLIC_APP_URL": "https://portal.corywong.ca"
   },
   "observability": { "enabled": true }

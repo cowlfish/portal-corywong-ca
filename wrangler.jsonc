@@ -1,0 +1,43 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "portal-corywong-ca",
+  "main": "worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "preview_urls": true,
+  // Uncomment at cutover, after removing the Vercel CNAME for portal.corywong.ca
+  // "routes": [{ "pattern": "portal.corywong.ca", "custom_domain": true }],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    // Self-reference used by OpenNext's caching layer; must match "name"
+    { "binding": "WORKER_SELF_REFERENCE", "service": "portal-corywong-ca" }
+  ],
+  "r2_buckets": [
+    { "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "portal-corywong-ca-opennext-cache" },
+    // Encrypted transaction documents (replaces UPLOAD_DIR on disk)
+    { "binding": "DOCUMENTS", "bucket_name": "portal-corywong-ca-documents" }
+  ],
+  "hyperdrive": [
+    {
+      // Neon Postgres. Create with:
+      //   npx wrangler hyperdrive create portal-neon --connection-string="$PORTAL_DATABASE_URL"
+      // then paste the returned id here.
+      "binding": "HYPERDRIVE",
+      "id": "REPLACE_WITH_HYPERDRIVE_ID",
+      "localConnectionString": "postgresql://postgres:postgres@localhost:5432/portal"
+    }
+  ],
+  "triggers": {
+    // Replaces vercel.json crons. MLS delta sync every 15 min (Vercel Hobby forced daily).
+    "crons": ["*/15 * * * *", "0 12 * * *"]
+  },
+  "vars": {
+    "NEXT_PUBLIC_APP_NAME": "Cory Wong Real Estate",
+    "NEXT_PUBLIC_APP_URL": "https://portal.corywong.ca"
+  },
+  "observability": { "enabled": true }
+}

@@ -45,3 +45,8 @@ next-env.d.ts
 
 # encrypted document uploads
 /uploads/
+
+# Cloudflare / OpenNext
+.open-next/
+.wrangler/
+.dev.vars

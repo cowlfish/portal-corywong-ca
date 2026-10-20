@@ -1,24 +1,30 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
-import { readFile, writeFile, mkdir, unlink } from "fs/promises";
-import { join } from "path";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 const ALGORITHM = "aes-256-gcm" as const;
-const ENCRYPTION_KEY = process.env.DOCUMENT_ENCRYPTION_KEY || randomBytes(32).toString("hex");
 
 function getKey(): Buffer {
-  const key = Buffer.from(ENCRYPTION_KEY, "hex");
+  // No random fallback: a per-instance key would make stored documents undecryptable.
+  const hex = process.env.DOCUMENT_ENCRYPTION_KEY;
+  if (!hex) throw new Error("DOCUMENT_ENCRYPTION_KEY is not set");
+  const key = Buffer.from(hex, "hex");
   if (key.length !== 32) {
     throw new Error("DOCUMENT_ENCRYPTION_KEY must be 64 hex characters (32 bytes)");
   }
   return key;
 }
 
+function getBucket(): R2Bucket {
+  const bucket = getCloudflareContext().env.DOCUMENTS;
+  if (!bucket) throw new Error("DOCUMENTS R2 binding is not configured");
+  return bucket;
+}
+
 export interface EncryptionResult {
+  // R2 object key (column name kept from the filesystem version)
   storagePath: string;
   iv: string;
 }
-
-const UPLOAD_DIR = process.env.UPLOAD_DIR || join(process.cwd(), "uploads");
 
 export async function encryptAndStore(
   fileBuffer: Buffer,
@@ -33,13 +39,9 @@ export async function encryptAndStore(
   const encrypted = Buffer.concat([cipher.update(fileBuffer), cipher.final()]);
   const authTag = cipher.getAuthTag();
 
-  const storageName = `${Date.now()}-${randomBytes(8).toString("hex")}`;
-  const dir = join(UPLOAD_DIR, transactionId);
-  await mkdir(dir, { recursive: true });
-
-  const storagePath = join(dir, storageName);
+  const storagePath = `${transactionId}/${Date.now()}-${randomBytes(8).toString("hex")}`;
   const combined = Buffer.concat([authTag, encrypted]);
-  await writeFile(storagePath, new Uint8Array(combined));
+  await getBucket().put(storagePath, new Uint8Array(combined));
 
   return {
     storagePath,
@@ -54,7 +56,9 @@ export async function decryptFile(
   const iv = Buffer.from(ivHex, "hex");
   const key = getKey();
 
-  const combined = await readFile(storagePath);
+  const object = await getBucket().get(storagePath);
+  if (!object) throw new Error("Document not found in storage");
+  const combined = Buffer.from(await object.arrayBuffer());
   const authTag = combined.subarray(0, 16);
   const encrypted = combined.subarray(16);
 
@@ -66,9 +70,6 @@ export async function decryptFile(
 }
 
 export async function deleteEncryptedFile(storagePath: string): Promise<void> {
-  try {
-    await unlink(storagePath);
-  } catch {
-    // File already deleted or doesn't exist
-  }
+  // R2 delete is a no-op for missing keys
+  await getBucket().delete(storagePath);
 }

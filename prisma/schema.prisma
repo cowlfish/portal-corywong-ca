@@ -1,6 +1,15 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
+  // Workers forbid compiling WebAssembly at runtime; this ships the query compiler as a .wasm module
+  runtime  = "cloudflare"
+}
+
+// Same client for Node: scripts (seed, password reset, MLS catch-up) and the Prisma CLI.
+generator nodeClient {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma-node"
+  runtime  = "nodejs"
 }
 
 datasource db {
@@ -120,6 +129,7 @@ model MlsListing {
   tourStops      TourStop[]
   cmaComps       CmaComp[]
   comments       ListingComment[]
+  tourRequests   TourRequest[]
 
   @@index([status])
   @@index([city, status])
@@ -316,7 +326,8 @@ model User {
   tours            Tour[]
   groupMemberships ClientGroupMember[]
   listingComments  ListingComment[]
-  invite           Invite? @relation(fields: [inviteId], references: [id], onDelete: SetNull)
+  tourRequests     TourRequest[]
+  invite           Invite?             @relation(fields: [inviteId], references: [id], onDelete: SetNull)
 
   @@index([email])
   @@index([role])
@@ -945,4 +956,38 @@ model SiteSetting {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("site_settings")
+}
+
+// ─── Tour Requests ─────────────────────────────────────────────────
+// "Request a Tour" on a listing page. Open to visitors who aren't signed in, so contact
+// details are stored on the request; userId is set when a signed-in client sends it.
+
+enum TourRequestStatus {
+  NEW
+  CONTACTED
+  BOOKED
+  CLOSED
+}
+
+model TourRequest {
+  id             String            @id @default(cuid())
+  listingId      String            @map("listing_id")
+  userId         String?           @map("user_id")
+  name           String
+  email          String
+  phone          String?
+  preferredTimes String            @map("preferred_times") @db.Text
+  message        String?           @db.Text
+  status         TourRequestStatus @default(NEW)
+  agentNotes     String?           @map("agent_notes") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  listing MlsListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user    User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([email])
+  @@map("tour_requests")
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const PUBLIC_PATHS = [
-  "/", "/login", "/register", "/agent-login", "/pending-approval",
+  "/", "/login", "/register", "/agent-login", "/pending-approval", "/privacy", "/terms",
   "/api/auth/login", "/api/auth/register",
 ];
 
@@ -17,6 +17,9 @@ function isPublicPath(pathname: string): boolean {
   if (pathname.startsWith("/tours/share/")) return true;
   if (pathname.startsWith("/api/tours/share/")) return true;
   if (pathname.startsWith("/api/feature-flags")) return true;
+  if (pathname === "/api/tour-requests") return true;
+  // Cron and manual sync endpoints authenticate with their own bearer secrets, not a session
+  if (pathname.startsWith("/api/cron/") || pathname === "/api/mls/sync") return true;
   if (pathname.startsWith("/register-invite/")) return true;
   if (pathname.startsWith("/api/invites/")) return true;
   return false;

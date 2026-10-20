@@ -39,3 +39,20 @@ interface ExportedHandler<Env = unknown> {
   fetch?(request: Request, env: Env, ctx: ExecutionContext): Response | Promise<Response>;
   scheduled?(controller: ScheduledController, env: Env, ctx: ExecutionContext): void | Promise<void>;
 }
+
+// Cloudflare Email Service send binding (structured form)
+interface EmailAddress {
+  email: string;
+  name?: string;
+}
+
+interface SendEmail {
+  send(message: {
+    to: string | EmailAddress | (string | EmailAddress)[];
+    from: string | EmailAddress;
+    subject: string;
+    html?: string;
+    text?: string;
+    replyTo?: string | EmailAddress;
+  }): Promise<{ messageId: string }>;
+}

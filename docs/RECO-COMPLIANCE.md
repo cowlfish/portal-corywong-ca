@@ -64,7 +64,8 @@ Status of the `cloudflare-port` branch.
   "Trustwell Realty Inc., Brokerage", matching realestate.corywong.ca.
 - Shared tour and market snapshot pages and the CMA export didn't name the brokerage. They now do.
 - Added the brokerage bar at the top of public and client pages; it was only in the footer.
-- Sold and expired listings were reachable on public listing pages. Now active only.
+- Sold and expired listings were reachable on public listing pages. Now active only, and a daily check marks
+  listings that have left the IDX feed so they stop showing as active.
 - "Get instant, daily, or weekly alerts" and "Email alerts" described features that don't exist (see below).
 
 **Open:**
@@ -72,9 +73,8 @@ Status of the `cloudflare-port` branch.
 1. **Alert frequency does nothing.** The saved-search form offers Instant / Daily / Weekly, but
    `generateAlerts` ignores the setting and runs once a day, and nothing sends email. Either build it or
    remove the options. The check warns on "Instant" until then.
-2. **No privacy policy or terms.** Registration links to `/privacy` and `/terms`, which 404: the
-   `privacy.html` / `terms.html` / `accessibility.html` files at the repo root aren't served by Next.js.
-   The portal collects names, emails and phone numbers, so PIPEDA needs a real, reachable privacy policy.
+2. **Privacy policy and terms: drafted, need review.** `/privacy` and `/terms` now exist (2026-10-20) and describe
+   what the portal actually collects, including tour requests. Have the brokerage review both before launch.
 3. **REALTOR® / CREA membership.** The TRREB feed implies TRREB (and so CREA) membership. If Cory is a
    member in good standing, set `REALTOR_MEMBER = true` in the check; if not, the CREA legend should go too.
 4. **Listing brokerage contact details.** Listing pages name the listing office but don't give its

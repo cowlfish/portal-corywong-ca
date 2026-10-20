@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { hashPassword, createToken, setSessionCookie } from "@/lib/auth";
 import { jsonError } from "@/lib/api-helpers";
+import { notifyAgent } from "@/lib/notify";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -47,6 +48,22 @@ export async function POST(req: NextRequest) {
       inviteId,
       recoAcknowledged: recoAcknowledged === true,
     },
+  });
+
+  const pending = approvalStatus === "PENDING";
+  notifyAgent({
+    subject: pending
+      ? `New sign-up waiting for approval: ${firstName} ${lastName}`
+      : `New client joined from an invite: ${firstName} ${lastName}`,
+    fields: [
+      ["Name", `${firstName} ${lastName}`],
+      ["Email", user.email],
+      ["Phone", user.phone],
+      ["Status", pending ? "Waiting for your approval" : "Approved (invite)"],
+    ],
+    actionPath: pending ? "/agent/approvals" : "/agent/clients",
+    actionLabel: pending ? "Review sign-up" : "View clients",
+    replyTo: { email: user.email, name: `${firstName} ${lastName}` },
   });
 
   const token = createToken({

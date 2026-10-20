@@ -15,6 +15,13 @@ const perRequest = new WeakMap<object, PrismaClient>();
 // Scripts, seeds and plain `next dev` have no Cloudflare context and use the env var.
 let nodeClient: PrismaClient | undefined;
 
+// The app's client is built for Workers (its query compiler is a .wasm module import), which
+// Node can't load. Node scripts that reuse app code (e.g. the MLS sync engine) pass in a
+// client generated for Node from the same schema (src/generated/prisma-node).
+export function setPrismaClient(client: unknown) {
+  nodeClient = client as PrismaClient;
+}
+
 function getPrisma(): PrismaClient {
   let ctx: { env: CloudflareEnv; ctx: object } | undefined;
   try {

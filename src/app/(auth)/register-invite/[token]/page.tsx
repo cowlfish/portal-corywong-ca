@@ -214,7 +214,15 @@ export default function InviteRegisterPage() {
             <span className="text-xs text-slate-600">
               I acknowledge that real estate services are provided by a registrant under the
               Real Estate Council of Ontario (RECO). Information provided through this portal
-              is deemed reliable but not guaranteed. I agree to the terms of service.
+              is deemed reliable but not guaranteed. I have read and agree to the{" "}
+              <Link href="/terms" className="text-slate-900 underline hover:text-slate-700">
+                Terms of Use
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-slate-900 underline hover:text-slate-700">
+                Privacy Policy
+              </Link>
+              .
             </span>
           </label>
         </div>

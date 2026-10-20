@@ -40,6 +40,10 @@ export default function ComplianceFooter({ className = "" }: { className?: strin
           not guaranteed.
         </div>
         <div className="border-t border-slate-700 pt-3 text-slate-500">
+          <a href="/privacy" className="underline hover:text-white">Privacy Policy</a>
+          {" · "}
+          <a href="/terms" className="underline hover:text-white">Terms of Use</a>
+          {" · "}
           &copy; {new Date().getFullYear()} Trustwell Realty Inc., Brokerage. All
           rights reserved.
         </div>

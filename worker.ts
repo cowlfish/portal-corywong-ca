@@ -8,6 +8,7 @@ import { default as handler } from "./.open-next/worker.js";
 const CRON_ROUTES: Record<string, string> = {
   "*/15 * * * *": "/api/cron/mls-sync",
   "0 12 * * *": "/api/cron/generate-alerts",
+  "30 7 * * *": "/api/cron/mls-reconcile",
 };
 
 export default {

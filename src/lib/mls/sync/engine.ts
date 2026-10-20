@@ -7,6 +7,10 @@ import type {
   ReplicationCursor,
 } from "../types";
 
+// The mirror keeps only the cover photo; listing pages fetch the full gallery live.
+// (~40 photos per listing across ~100k listings would be several GB.)
+const STORED_PHOTOS_PER_LISTING = 1;
+
 const STATUS_MAP: Record<string, string> = {
   Active: "ACTIVE",
   Sold: "SOLD",
@@ -26,14 +30,46 @@ export interface SyncResult {
   durationMs: number;
 }
 
+// Limits per run, sized for a 15-minute Cron Trigger (15 min wall time, 30 s CPU).
+// A normal run is 1–2 pages (~60 changes per 15 min); a backlog drains over successive runs.
+const DELTA_MAX_PAGES = 20;
+const DELTA_MAX_MS = 8 * 60 * 1000;
+// A RUNNING row older than this is a run that died without recording its end
+const STALE_RUN_MS = 14 * 60 * 1000;
+
+export interface DeltaSyncResult extends SyncResult {
+  skipped?: "already-running";
+  // False when the run stopped at its page or time limit; the next run continues
+  caughtUp: boolean;
+}
+
 export async function runDeltaSync(
-  provider: MlsFeedProvider
-): Promise<SyncResult> {
+  provider: MlsFeedProvider,
+  { maxPages = DELTA_MAX_PAGES, maxMs = DELTA_MAX_MS } = {}
+): Promise<DeltaSyncResult> {
   const startTime = Date.now();
 
+  // Don't overlap with a run still in progress (e.g. a slow backlog run)
+  const running = await prisma.mlsSyncRun.findFirst({
+    where: { status: "RUNNING", syncType: "delta" },
+    orderBy: { startedAt: "desc" },
+  });
+  if (running && Date.now() - running.startedAt.getTime() < STALE_RUN_MS) {
+    return {
+      syncRunId: running.id, totalRecords: 0, inserted: 0, updated: 0, deleted: 0, errors: 0,
+      durationMs: 0, skipped: "already-running", caughtUp: false,
+    };
+  }
+  await prisma.mlsSyncRun.updateMany({
+    where: { status: "RUNNING", startedAt: { lt: new Date(Date.now() - STALE_RUN_MS) } },
+    data: { status: "FAILED", completedAt: new Date() },
+  });
+
+  // The cursor is saved after every page, so resume from the latest run that made progress,
+  // even one that failed part-way.
   const lastRun = await prisma.mlsSyncRun.findFirst({
-    where: { status: "COMPLETED" },
-    orderBy: { completedAt: "desc" },
+    where: { cursor: { not: null }, cursorKey: { not: null } },
+    orderBy: { startedAt: "desc" },
   });
 
   const lastCursor: ReplicationCursor | null =
@@ -55,12 +91,21 @@ export async function runDeltaSync(
   let deleted = 0;
   let errors = 0;
   let currentCursor = lastCursor;
+  let caughtUp = false;
   const errorDetails: Array<{ mlsNumber: string; error: string }> = [];
 
-  try {
-    let hasMore = true;
+  const counts = () => ({
+    totalRecords,
+    insertedCount: inserted,
+    updatedCount: updated,
+    deletedCount: deleted,
+    errorCount: errors,
+    cursor: currentCursor?.lastTimestamp,
+    cursorKey: currentCursor?.lastKey,
+  });
 
-    while (hasMore) {
+  try {
+    for (let page = 0; page < maxPages && Date.now() - startTime < maxMs; page++) {
       const delta: MlsFeedDelta = await provider.fetchDelta(currentCursor);
 
       for (const listing of delta.listings) {
@@ -92,8 +137,14 @@ export async function runDeltaSync(
         }
       }
 
-      currentCursor = delta.cursor;
-      hasMore = delta.hasMore;
+      if (delta.cursor) currentCursor = delta.cursor;
+      // Checkpoint, so a run cut off by the platform still keeps its progress
+      await prisma.mlsSyncRun.update({ where: { id: syncRun.id }, data: counts() });
+
+      if (!delta.hasMore) {
+        caughtUp = true;
+        break;
+      }
     }
 
     await prisma.mlsSyncRun.update({
@@ -101,13 +152,7 @@ export async function runDeltaSync(
       data: {
         status: "COMPLETED",
         completedAt: new Date(),
-        totalRecords,
-        insertedCount: inserted,
-        updatedCount: updated,
-        deletedCount: deleted,
-        errorCount: errors,
-        cursor: currentCursor?.lastTimestamp,
-        cursorKey: currentCursor?.lastKey,
+        ...counts(),
         errorDetails:
           errorDetails.length > 0
             ? (errorDetails as unknown as Prisma.InputJsonValue)
@@ -120,13 +165,8 @@ export async function runDeltaSync(
       data: {
         status: "FAILED",
         completedAt: new Date(),
-        totalRecords,
-        insertedCount: inserted,
-        updatedCount: updated,
-        deletedCount: deleted,
+        ...counts(),
         errorCount: errors + 1,
-        cursor: currentCursor?.lastTimestamp,
-        cursorKey: currentCursor?.lastKey,
         errorDetails: [
           ...errorDetails,
           {
@@ -147,7 +187,43 @@ export async function runDeltaSync(
     deleted,
     errors,
     durationMs: Date.now() - startTime,
+    caughtUp,
   };
+}
+
+export interface ReconcileResult {
+  feedListings: number;
+  activeInMirror: number;
+  removed: number;
+}
+
+// Marks mirror listings DELETED once they're no longer in the feed (sold, expired, withdrawn).
+// Without this they would stay ACTIVE and keep showing on public pages.
+export async function reconcileRemovedListings(provider: MlsFeedProvider): Promise<ReconcileResult> {
+  const feedKeys = await provider.fetchAllListingKeys();
+  const active = await prisma.mlsListing.findMany({
+    where: { status: "ACTIVE" },
+    select: { listingKey: true },
+  });
+
+  // A short or failed key listing must not wipe the mirror
+  if (feedKeys.size < active.length * 0.8) {
+    throw new Error(
+      `Feed returned ${feedKeys.size} listings but the mirror has ${active.length} active; not reconciling`
+    );
+  }
+
+  const gone = active.map((l) => l.listingKey).filter((k) => !feedKeys.has(k));
+  let removed = 0;
+  for (let i = 0; i < gone.length; i += 1000) {
+    const { count } = await prisma.mlsListing.updateMany({
+      where: { listingKey: { in: gone.slice(i, i + 1000) }, status: "ACTIVE" },
+      data: { status: "DELETED", statusChangeAt: new Date() },
+    });
+    removed += count;
+  }
+
+  return { feedListings: feedKeys.size, activeInMirror: active.length, removed };
 }
 
 export async function runFullSync(
@@ -346,7 +422,7 @@ async function upsertListing(
         where: { listingId: existing.id },
       });
       await prisma.mlsListingPhoto.createMany({
-        data: listing.photos.map((p) => ({
+        data: listing.photos.slice(0, STORED_PHOTOS_PER_LISTING).map((p) => ({
           listingId: existing.id,
           photoUrl: p.photoUrl,
           displayOrder: p.displayOrder,
@@ -398,7 +474,7 @@ async function upsertListing(
 
     if (listing.photos && listing.photos.length > 0) {
       await prisma.mlsListingPhoto.createMany({
-        data: listing.photos.map((p) => ({
+        data: listing.photos.slice(0, STORED_PHOTOS_PER_LISTING).map((p) => ({
           listingId: created.id,
           photoUrl: p.photoUrl,
           displayOrder: p.displayOrder,

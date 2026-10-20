@@ -31,13 +31,25 @@
       "localConnectionString": "postgresql://postgres:postgres@localhost:5432/portal"
     }
   ],
+  "send_email": [
+    {
+      // Cloudflare Email Service. Onboard notify.corywong.ca under Email Service > Email Sending
+      // first (adds SPF/DKIM/DMARC on that subdomain only; corywong.ca mail stays on DreamHost).
+      "name": "EMAIL",
+      "allowed_sender_addresses": ["portal@notify.corywong.ca"],
+      "allowed_destination_addresses": ["cory@corywong.ca"]
+    }
+  ],
   "triggers": {
-    // Replaces vercel.json crons. MLS delta sync every 15 min (Vercel Hobby forced daily).
-    "crons": ["*/15 * * * *", "0 12 * * *"]
+    // Replaces vercel.json crons (times are UTC). worker.ts maps each to its route.
+    // MLS delta sync every 15 min; alerts daily; removed-listing check daily at 07:30 UTC.
+    "crons": ["*/15 * * * *", "0 12 * * *", "30 7 * * *"]
   },
   "vars": {
     "NEXT_PUBLIC_APP_NAME": "Cory Wong, Broker",
-    "NEXT_PUBLIC_APP_URL": "https://portal.corywong.ca"
+    "NEXT_PUBLIC_APP_URL": "https://portal.corywong.ca",
+    // Where new sign-ups, tour requests and client comments are emailed
+    "NOTIFY_EMAIL": "cory@corywong.ca"
   },
   "observability": { "enabled": true }
 }

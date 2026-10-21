@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth, jsonSuccess, jsonError } from "@/lib/api-helpers";
 import { NextRequest } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
+import { NOT_COMMERCIAL } from "@/lib/mls/listing-scope";
 
 export async function GET(
   request: NextRequest,
@@ -19,7 +20,7 @@ export async function GET(
   const url = request.nextUrl;
   const search = url.searchParams;
 
-  const where: Prisma.MlsListingWhereInput = { status: "ACTIVE" };
+  const where: Prisma.MlsListingWhereInput = { status: "ACTIVE", AND: [NOT_COMMERCIAL] };
 
   const city = search.get("city");
   if (city) where.city = { contains: city, mode: "insensitive" };

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { jsonError, jsonSuccess, requireAuth } from "@/lib/api-helpers";
+import { NOT_COMMERCIAL } from "@/lib/mls/listing-scope";
 
 export async function GET() {
   const { error } = await requireAuth();
@@ -8,19 +9,19 @@ export async function GET() {
   try {
     const [areas, neighbourhoods, propertyTypes] = await Promise.all([
       prisma.mlsListing.findMany({
-        where: { status: "ACTIVE", area: { not: null } },
+        where: { status: "ACTIVE", AND: [NOT_COMMERCIAL], area: { not: null } },
         select: { area: true },
         distinct: ["area"],
         orderBy: { area: "asc" },
       }),
       prisma.mlsListing.findMany({
-        where: { status: "ACTIVE", neighbourhood: { not: null } },
+        where: { status: "ACTIVE", AND: [NOT_COMMERCIAL], neighbourhood: { not: null } },
         select: { neighbourhood: true },
         distinct: ["neighbourhood"],
         orderBy: { neighbourhood: "asc" },
       }),
       prisma.mlsListing.findMany({
-        where: { status: "ACTIVE", propertyType: { not: null } },
+        where: { status: "ACTIVE", AND: [NOT_COMMERCIAL], propertyType: { not: null } },
         select: { propertyType: true },
         distinct: ["propertyType"],
         orderBy: { propertyType: "asc" },

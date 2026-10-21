@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 export { ALERTS_ENABLED } from "./alerts-config";
 import { propertyTypeWhere } from "./property-types";
+import { NOT_COMMERCIAL } from "@/lib/mls/listing-scope";
 
 interface SearchCriteria {
   city?: string;
@@ -40,13 +41,14 @@ export async function generateAlerts(): Promise<AlertGenerationResult> {
       const where: Prisma.MlsListingWhereInput = {
         status: "ACTIVE",
         createdAt: { gt: since },
+        AND: [NOT_COMMERCIAL],
       };
 
       if (criteria.city) {
         where.city = { equals: criteria.city, mode: "insensitive" };
       }
       if (criteria.propertyType) {
-        where.AND = [propertyTypeWhere(criteria.propertyType)];
+        where.AND = [NOT_COMMERCIAL, propertyTypeWhere(criteria.propertyType)];
       }
       if (criteria.minPrice != null) {
         where.listPrice = { ...(where.listPrice as object), gte: criteria.minPrice };

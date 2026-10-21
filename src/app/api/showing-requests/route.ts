@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 import { jsonSuccess, jsonError } from "@/lib/api-helpers";
 import { notifyAgent } from "@/lib/notify";
+import { NOT_COMMERCIAL } from "@/lib/mls/listing-scope";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
   if (!EMAIL_RE.test(email)) return jsonError("Please enter a valid email address", 400);
 
   const listing = await prisma.mlsListing.findFirst({
-    where: { id: listingId, status: "ACTIVE" },
+    where: { id: listingId, status: "ACTIVE", AND: [NOT_COMMERCIAL] },
     select: { id: true, mlsNumber: true, unitNumber: true, streetNumber: true, streetName: true, city: true, listPrice: true },
   });
   if (!listing) return jsonError("This listing is no longer available", 404);

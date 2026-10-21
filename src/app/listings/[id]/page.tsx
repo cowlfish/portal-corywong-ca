@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import ListingDetailClient from "./ListingDetailClient";
 import { createProvider } from "@/lib/mls/providers";
 import type { MlsFeedProvider } from "@/lib/mls/types";
+import { NOT_COMMERCIAL } from "@/lib/mls/listing-scope";
 
 // Photos and rooms come from the feed live: the mirror keeps only the cover photo, and the
 // feed's room records (~110M) are too many to copy. Falls back to stored data if the feed is
@@ -27,7 +28,7 @@ async function fromFeed<T>(fetcher: (p: MlsFeedProvider) => Promise<T>): Promise
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const listing = await prisma.mlsListing.findFirst({
-    where: { OR: [{ id }, { mlsNumber: id }], status: "ACTIVE" },
+    where: { OR: [{ id }, { mlsNumber: id }], status: "ACTIVE", AND: [NOT_COMMERCIAL] },
     select: { mlsNumber: true, streetNumber: true, streetName: true, city: true, listPrice: true, propertyType: true },
   });
 
@@ -48,7 +49,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const { id } = await params;
 
   const listing = await prisma.mlsListing.findFirst({
-    where: { OR: [{ id }, { mlsNumber: id }], status: "ACTIVE" },
+    where: { OR: [{ id }, { mlsNumber: id }], status: "ACTIVE", AND: [NOT_COMMERCIAL] },
     include: {
       photos: { orderBy: { displayOrder: "asc" } },
       rooms: { orderBy: { roomType: "asc" } },

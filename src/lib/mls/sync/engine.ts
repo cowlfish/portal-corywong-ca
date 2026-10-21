@@ -1,6 +1,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/client";
 import { locatePostalCode } from "../geocode";
+import { COMMERCIAL_TYPE, NOT_COMMERCIAL } from "../listing-scope";
 import type {
   MlsFeedProvider,
   MlsFeedDelta,
@@ -574,6 +575,7 @@ export async function backfillListingDetails(
   const startTime = Date.now();
   const where = {
     status: "ACTIVE" as const,
+    AND: [NOT_COMMERCIAL],
     listDate: null,
     updatedAt: { lt: new Date(Date.now() - 6 * 60 * 60 * 1000) },
   };
@@ -603,6 +605,7 @@ export async function geocodeListings({ maxListings = 2000, maxMs = 15_000 } = {
   const startTime = Date.now();
   const where = {
     status: "ACTIVE" as const,
+    AND: [NOT_COMMERCIAL],
     latitude: null,
     postalCode: { not: null },
     updatedAt: { lt: new Date(Date.now() - 6 * 60 * 60 * 1000) },
@@ -657,4 +660,29 @@ export async function syncOpenHouses(provider: MlsFeedProvider): Promise<{ openH
     prisma.mlsOpenHouse.createMany({ data }),
   ]);
   return { openHouses: data.length, listings: new Set(data.map((d) => d.listingId)).size };
+}
+
+// Commercial listings stored before the portal left them out. Deleted in batches, except any
+// a client saved, commented on, toured or requested (those stay, hidden from search).
+export async function pruneCommercialListings({ maxListings = 2000 } = {}): Promise<number> {
+  let pruned = 0;
+  while (pruned < maxListings) {
+    const batch = await prisma.mlsListing.findMany({
+      where: {
+        propertyType: COMMERCIAL_TYPE,
+        favorites: { none: {} },
+        propertyAlerts: { none: {} },
+        tourStops: { none: {} },
+        cmaComps: { none: {} },
+        comments: { none: {} },
+        showingRequests: { none: {} },
+      },
+      select: { id: true },
+      take: 500,
+    });
+    if (batch.length === 0) break;
+    const { count } = await prisma.mlsListing.deleteMany({ where: { id: { in: batch.map((l) => l.id) } } });
+    pruned += count;
+  }
+  return pruned;
 }

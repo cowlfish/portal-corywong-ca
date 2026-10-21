@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { NOT_COMMERCIAL } from "@/lib/mls/listing-scope";
 
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q")?.trim();
@@ -12,6 +13,7 @@ export async function GET(request: NextRequest) {
       prisma.mlsListing.findMany({
         where: {
           status: "ACTIVE",
+          AND: [NOT_COMMERCIAL],
           OR: [
             { streetName: { contains: q, mode: "insensitive" } },
             { postalCode: { startsWith: q.toUpperCase() } },
@@ -33,6 +35,7 @@ export async function GET(request: NextRequest) {
         by: ["city"],
         where: {
           status: "ACTIVE",
+          AND: [NOT_COMMERCIAL],
           city: { contains: q, mode: "insensitive" },
         },
         _count: { city: true },
@@ -43,6 +46,7 @@ export async function GET(request: NextRequest) {
         by: ["neighbourhood"],
         where: {
           status: "ACTIVE",
+          AND: [NOT_COMMERCIAL],
           neighbourhood: { contains: q, mode: "insensitive" },
           NOT: { neighbourhood: null },
         },
@@ -53,6 +57,7 @@ export async function GET(request: NextRequest) {
       prisma.mlsListing.findMany({
         where: {
           status: "ACTIVE",
+          AND: [NOT_COMMERCIAL],
           mlsNumber: { startsWith: q.toUpperCase() },
         },
         select: {

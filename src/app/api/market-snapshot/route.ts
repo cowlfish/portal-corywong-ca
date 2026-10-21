@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { jsonError, jsonSuccess, requireAuth } from "@/lib/api-helpers";
 import { Prisma } from "@/generated/prisma/client";
+import { NOT_COMMERCIAL } from "@/lib/mls/listing-scope";
 
 export async function GET(request: Request) {
   const { error } = await requireAuth();
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
   const minBaths = url.searchParams.get("minBaths");
 
   // Sales only: monthly rents and $0 placeholders would skew every price statistic
-  const where: Prisma.MlsListingWhereInput = { status: "ACTIVE", transactionType: "For Sale" };
+  const where: Prisma.MlsListingWhereInput = { status: "ACTIVE", transactionType: "For Sale", AND: [NOT_COMMERCIAL] };
   if (area) where.area = area;
   if (neighbourhood) where.neighbourhood = neighbourhood;
   if (propertyType) where.propertyType = propertyType;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { NOT_COMMERCIAL } from "@/lib/mls/listing-scope";
 
 export async function GET(
   _request: NextRequest,
@@ -13,6 +14,7 @@ export async function GET(
         OR: [{ id }, { mlsNumber: id }],
         // Active only: sold/expired listings must not be published (RECO 5.4, TRREB IDX)
         status: "ACTIVE",
+        AND: [NOT_COMMERCIAL],
       },
       include: {
         photos: { orderBy: { displayOrder: "asc" } },

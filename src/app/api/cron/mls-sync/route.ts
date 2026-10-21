@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createProvider } from "@/lib/mls/providers";
-import { backfillListingDetails, geocodeListings, runDeltaSync, syncOpenHouses } from "@/lib/mls/sync/engine";
+import { backfillListingDetails, geocodeListings, pruneCommercialListings, runDeltaSync, syncOpenHouses } from "@/lib/mls/sync/engine";
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -28,7 +28,8 @@ export async function GET(request: NextRequest) {
     const geocode = result.skipped ? null : await geocodeListings({ maxListings: 1000, maxMs: 5_000 });
     // Open houses: once an hour (the first run after the top of the hour)
     const openHouses = !result.skipped && new Date().getUTCMinutes() < 15 ? await syncOpenHouses(provider) : null;
-    return NextResponse.json({ ok: true, result, backfill, geocode, openHouses });
+    const commercialPruned = result.skipped ? null : await pruneCommercialListings({ maxListings: 2000 });
+    return NextResponse.json({ ok: true, result, backfill, geocode, openHouses, commercialPruned });
   } catch (err) {
     return NextResponse.json(
       {

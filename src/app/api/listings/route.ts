@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { propertyTypeWhere } from "@/lib/mls/property-types";
+import { NOT_COMMERCIAL } from "@/lib/mls/listing-scope";
 
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
@@ -22,9 +23,8 @@ export async function GET(request: NextRequest) {
   if (transaction === "sale") where.transactionType = "For Sale";
   else if (transaction === "lease") where.transactionType = { in: ["For Lease", "For Sub-Lease"] };
 
-  // Placeholder prices from listing brokerages ($0, $1 "price on request"). Leases keep
-  // small values: some commercial leases are priced per square foot ($10.50).
-  where.listPrice = { gte: transaction === "lease" ? 1 : 1000 };
+  // Placeholder prices from listing brokerages ($0, $1 "price on request")
+  where.listPrice = { gte: transaction === "lease" ? 100 : 1000 };
 
   const minPrice = sp.get("minPrice");
   const maxPrice = sp.get("maxPrice");
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
   }
 
   const propertyType = sp.get("propertyType");
-  const and: unknown[] = [];
+  const and: unknown[] = [NOT_COMMERCIAL];
   if (propertyType) and.push(propertyTypeWhere(propertyType));
 
   const city = sp.get("city");

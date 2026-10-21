@@ -14,6 +14,8 @@ const BATCH_SIZE = 10_000;
 // long responses are sometimes cut off mid-stream
 const DELTA_PAGE_SIZE = 50;
 const MAX_ATTEMPTS = 3;
+// Commercial listings (retail, office, industrial, ...) aren't part of the portal
+const RESIDENTIAL = "PropertyType ne 'Commercial'";
 // Property records don't include photos unless Media is expanded. One size is enough.
 const PHOTO_FILTER = "MediaCategory eq 'Photo' and ImageSizeDescription eq 'Large'";
 const PHOTO_FIELDS = "MediaKey,MediaCategory,MediaURL,Order,ShortDescription,ImageWidth,ImageHeight,PreferredPhotoYN";
@@ -50,9 +52,9 @@ export class AmpreResoProvider implements MlsFeedProvider {
 
   async fetchDelta(cursor: ReplicationCursor | null): Promise<MlsFeedDelta> {
     const filter = cursor
-      ? `ModificationTimestamp gt ${cursor.lastTimestamp} or ` +
-        `(ModificationTimestamp eq ${cursor.lastTimestamp} and ListingKey gt '${cursor.lastKey}')`
-      : `StandardStatus eq 'Active'`;
+      ? `${RESIDENTIAL} and (` + `ModificationTimestamp gt ${cursor.lastTimestamp} or ` +
+        `(ModificationTimestamp eq ${cursor.lastTimestamp} and ListingKey gt '${cursor.lastKey}')` + ")"
+      : `${RESIDENTIAL} and StandardStatus eq 'Active'`;
 
     const url =
       `/Property?$filter=${encodeURIComponent(filter)}` +
@@ -151,9 +153,9 @@ export class AmpreResoProvider implements MlsFeedProvider {
 
     while (hasMore) {
       const filter = cursor
-        ? `ModificationTimestamp gt ${cursor.lastTimestamp} or ` +
-          `(ModificationTimestamp eq ${cursor.lastTimestamp} and ListingKey gt '${cursor.lastKey}')`
-        : `StandardStatus eq 'Active'`;
+        ? `${RESIDENTIAL} and (` + `ModificationTimestamp gt ${cursor.lastTimestamp} or ` +
+          `(ModificationTimestamp eq ${cursor.lastTimestamp} and ListingKey gt '${cursor.lastKey}')` + ")"
+        : `${RESIDENTIAL} and StandardStatus eq 'Active'`;
 
       const url =
         `/Property?$filter=${encodeURIComponent(filter)}` +

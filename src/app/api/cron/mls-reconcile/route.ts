@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createProvider } from "@/lib/mls/providers";
-import { reconcileRemovedListings } from "@/lib/mls/sync/engine";
+import { pruneRemovedListings, reconcileRemovedListings } from "@/lib/mls/sync/engine";
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
     });
 
     const result = await reconcileRemovedListings(provider);
-    return NextResponse.json({ ok: true, result });
+    const pruned = await pruneRemovedListings();
+    return NextResponse.json({ ok: true, result: { ...result, pruned } });
   } catch (err) {
     return NextResponse.json(
       {

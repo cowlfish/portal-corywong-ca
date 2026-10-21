@@ -6,8 +6,7 @@
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
   "preview_urls": true,
-  // Uncomment at cutover, after removing the Vercel CNAME for portal.corywong.ca
-  // "routes": [{ "pattern": "portal.corywong.ca", "custom_domain": true }],
+  "routes": [{ "pattern": "portal.corywong.ca", "custom_domain": true }],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -23,11 +22,11 @@
   ],
   "hyperdrive": [
     {
-      // Neon Postgres. Create with:
-      //   npx wrangler hyperdrive create portal-neon --connection-string="$PORTAL_DATABASE_URL"
-      // then paste the returned id here.
+      // Neon Postgres (config "portal-neon", direct non-pooler host). Caching is disabled:
+      // Hyperdrive doesn't invalidate cached reads on write, which would break approvals,
+      // sign-in and duplicate-request checks.
       "binding": "HYPERDRIVE",
-      "id": "REPLACE_WITH_HYPERDRIVE_ID",
+      "id": "ffe525a0b4e34bcba9f5e55c941b138a",
       "localConnectionString": "postgresql://postgres:postgres@localhost:5432/portal"
     }
   ],

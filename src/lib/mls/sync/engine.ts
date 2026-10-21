@@ -522,3 +522,33 @@ async function markListingDeleted(mlsNumber: string): Promise<void> {
     data: { status: "DELETED", statusChangeAt: new Date() },
   });
 }
+
+// Neon's free tier caps the database at 512 MB, and listings marked DELETED by the
+// reconcile pass would otherwise pile up at a few MB a day. Removes them once they've been
+// off the market for a while, unless a client or Cory has something attached to them.
+const PRUNE_AFTER_DAYS = 30;
+
+export async function pruneRemovedListings(olderThanDays = PRUNE_AFTER_DAYS): Promise<number> {
+  const cutoff = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
+  let pruned = 0;
+  for (;;) {
+    const batch = await prisma.mlsListing.findMany({
+      where: {
+        status: { not: "ACTIVE" },
+        statusChangeAt: { lt: cutoff },
+        favorites: { none: {} },
+        propertyAlerts: { none: {} },
+        tourStops: { none: {} },
+        cmaComps: { none: {} },
+        comments: { none: {} },
+        tourRequests: { none: {} },
+      },
+      select: { id: true },
+      take: 500,
+    });
+    if (batch.length === 0) return pruned;
+    // Photos, rooms, open houses and price history cascade
+    const { count } = await prisma.mlsListing.deleteMany({ where: { id: { in: batch.map((l) => l.id) } } });
+    pruned += count;
+  }
+}

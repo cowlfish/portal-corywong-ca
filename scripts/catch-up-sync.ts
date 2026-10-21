@@ -21,7 +21,9 @@ async function main() {
 
   let total = 0;
   for (;;) {
-    const result = await runDeltaSync(provider, { maxPages: 200, maxMs: 30 * 60 * 1000 });
+    // Under the engine's 14-minute stale-run window, so the Worker's cron waits instead of
+    // treating a long catch-up pass as stuck and starting its own
+    const result = await runDeltaSync(provider, { maxPages: 200, maxMs: 10 * 60 * 1000 });
     if (result.skipped) {
       console.log("Another sync is running; try again in a few minutes.");
       return;

@@ -119,7 +119,7 @@ export default function PrivacyPage() {
       <h2>10. Contact</h2>
       <p>
         For privacy questions or requests, contact {AGENT}, at{" "}
-        <a href="mailto:cory@corywong.ca">cory@corywong.ca</a>, or {BROKERAGE}, 3640 Victoria Park Ave., Suite 300,
+        <a href="mailto:cory.wong@trustwell.ca">cory.wong@trustwell.ca</a>, or {BROKERAGE}, 3640 Victoria Park Ave., Suite 300,
         Toronto, ON M2H 3B2, (416) 498-9995.
       </p>
     </>

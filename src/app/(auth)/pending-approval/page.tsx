@@ -67,8 +67,8 @@ export default function PendingApprovalPage() {
               (416) 498-9995
             </a>{" "}
             or{" "}
-            <a href="mailto:cory@corywong.ca" className="text-slate-900 underline">
-              cory@corywong.ca
+            <a href="mailto:cory.wong@trustwell.ca" className="text-slate-900 underline">
+              cory.wong@trustwell.ca
             </a>
             .
           </li>

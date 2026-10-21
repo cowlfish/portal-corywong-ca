@@ -81,7 +81,7 @@ export default function TermsPage() {
       <h2>11. Contact</h2>
       <p>
         {AGENT}, {BROKERAGE}, 3640 Victoria Park Ave., Suite 300, Toronto, ON M2H 3B2, (416) 498-9995,{" "}
-        <a href="mailto:cory@corywong.ca">cory@corywong.ca</a>.
+        <a href="mailto:cory.wong@trustwell.ca">cory.wong@trustwell.ca</a>.
       </p>
     </>
   );

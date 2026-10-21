@@ -9,14 +9,14 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   const agentExists = await prisma.user.findUnique({
-    where: { email: "cory@corywong.ca" },
+    where: { email: "cory.wong@trustwell.ca" },
   });
 
   if (!agentExists) {
     const passwordHash = await bcrypt.hash("changeme123", 12);
     await prisma.user.create({
       data: {
-        email: "cory@corywong.ca",
+        email: "cory.wong@trustwell.ca",
         passwordHash,
         firstName: "Cory",
         lastName: "Wong",
@@ -26,7 +26,7 @@ async function main() {
         mustChangePassword: true,
       },
     });
-    console.log("Created agent user: cory@corywong.ca");
+    console.log("Created agent user: cory.wong@trustwell.ca");
   } else {
     console.log("Agent user already exists");
   }

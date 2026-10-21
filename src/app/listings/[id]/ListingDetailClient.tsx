@@ -398,7 +398,7 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
             <div className="border-t border-slate-200 pt-4">
               <h3 className="text-sm font-medium text-slate-900 mb-3">Contact Agent</h3>
               <a
-                href={`mailto:cory@corywong.ca?subject=${encodeURIComponent(`Inquiry — MLS® ${l.mlsNumber}`)}`}
+                href={`mailto:cory.wong@trustwell.ca?subject=${encodeURIComponent(`Inquiry — MLS® ${l.mlsNumber}`)}`}
                 className="block w-full text-center px-4 py-2.5 border border-slate-300 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors"
               >
                 Email Cory Wong

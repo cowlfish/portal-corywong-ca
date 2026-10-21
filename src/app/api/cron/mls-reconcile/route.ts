@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createProvider } from "@/lib/mls/providers";
-import { pruneRemovedListings, reconcileRemovedListings } from "@/lib/mls/sync/engine";
+import { backfillListingDetails, geocodeListings, pruneRemovedListings, reconcileRemovedListings } from "@/lib/mls/sync/engine";
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -24,7 +24,10 @@ export async function GET(request: NextRequest) {
 
     const result = await reconcileRemovedListings(provider);
     const pruned = await pruneRemovedListings();
-    return NextResponse.json({ ok: true, result: { ...result, pruned } });
+    // The daily trigger gets 15 minutes, so it does the bulk of any backfill
+    const backfill = await backfillListingDetails(provider, { maxListings: 50_000, maxMs: 8 * 60 * 1000 });
+    const geocode = await geocodeListings({ maxListings: 150_000, maxMs: 4 * 60 * 1000 });
+    return NextResponse.json({ ok: true, result: { ...result, pruned, backfill, geocode } });
   } catch (err) {
     return NextResponse.json(
       {

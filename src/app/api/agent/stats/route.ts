@@ -9,14 +9,16 @@ export async function GET() {
     return jsonError("Forbidden", 403);
   }
 
-  const [totalClients, pendingApprovals, totalGroups, totalTours, totalSavedSearches, totalFavorites] =
+  const [totalClients, pendingApprovals, totalGroups, totalTours, totalSavedSearches, totalFavorites, newShowingRequests] =
     await Promise.all([
       prisma.user.count({ where: { role: UserRole.CLIENT } }),
       prisma.user.count({ where: { role: UserRole.CLIENT, approvalStatus: ApprovalStatus.PENDING } }),
       prisma.clientGroup.count({ where: { agentId: user.userId } }),
-      prisma.tour.count({ where: { userId: user.userId } }),
+      // All tours, not just Cory's own: clients plan tours too
+      prisma.tour.count(),
       prisma.savedSearch.count(),
       prisma.favorite.count(),
+      prisma.showingRequest.count({ where: { status: "NEW" } }),
     ]);
 
   return jsonSuccess({
@@ -26,5 +28,6 @@ export async function GET() {
     totalTours,
     totalSavedSearches,
     totalFavorites,
+    newShowingRequests,
   });
 }

@@ -110,6 +110,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Places before individual addresses: "Markham" should offer the city first
+    const rank: Record<string, number> = { mls: 0, city: 1, neighbourhood: 2, address: 3 };
+    suggestions.sort((a, b) => rank[a.type] - rank[b.type]);
     return NextResponse.json({ suggestions: suggestions.slice(0, 10) });
   } catch (error) {
     console.error("Autocomplete error:", error);

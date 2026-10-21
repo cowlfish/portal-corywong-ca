@@ -41,8 +41,9 @@
   ],
   "triggers": {
     // Replaces vercel.json crons (times are UTC). worker.ts maps each to its route.
-    // MLS delta sync every 15 min; alerts daily; removed-listing check daily at 07:30 UTC.
-    "crons": ["*/15 * * * *", "0 12 * * *", "30 7 * * *"]
+    // MLS delta sync every 15 min; removed-listing check daily at 07:30 UTC.
+    // Alerts ("0 12 * * *") are off; see ALERTS_ENABLED in src/lib/mls/alerts.ts.
+    "crons": ["*/15 * * * *", "30 7 * * *"]
   },
   "vars": {
     "NEXT_PUBLIC_APP_NAME": "Cory Wong, Broker",

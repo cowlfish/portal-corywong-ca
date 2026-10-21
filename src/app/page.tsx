@@ -33,14 +33,14 @@ export default function Home() {
       </header>
       <BrokerageBar />
 
-      <main className="flex-1 flex items-center justify-center px-4">
+      <main className="flex-1 flex justify-center px-4 py-12 sm:py-20">
         <div className="max-w-2xl w-full text-center">
           <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 tracking-tight">
             Your Real Estate Journey,<br />Organized
           </h1>
           <p className="mt-4 text-lg text-slate-500 max-w-lg mx-auto">
             Search Toronto &amp; GTA properties from the MLS&reg; — save favourites,
-            schedule tours, and get alerts for new listings.
+            and request showings with Cory.
           </p>
 
           <div className="mt-8 max-w-xl mx-auto">
@@ -82,10 +82,10 @@ export default function Home() {
               </p>
             </div>
             <div className="bg-white rounded-lg border border-slate-200 p-6">
-              <div className="text-2xl mb-3">🔔</div>
-              <h3 className="font-semibold text-slate-900">Property Alerts</h3>
+              <div className="text-2xl mb-3">📅</div>
+              <h3 className="font-semibold text-slate-900">Request Showings</h3>
               <p className="text-sm text-slate-500 mt-1">
-                Get alerts in your portal when new listings match your saved searches.
+                Ask Cory to arrange a showing from any listing, no account needed.
               </p>
             </div>
           </div>

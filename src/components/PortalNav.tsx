@@ -23,7 +23,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/listings", label: "Property Search", icon: "🏘️" },
   { href: "/searches", label: "Saved Searches", icon: "🔍" },
   { href: "/favorites", label: "My Lists", icon: "❤️" },
-  { href: "/alerts", label: "Alerts", icon: "🔔" },
   { href: "/tours", label: "Tours", icon: "🗺️" },
   { href: "/market-snapshot", label: "Market", icon: "📊" },
   { href: "/cma", label: "CMA", icon: "📊" },

@@ -21,7 +21,7 @@ export default function TermsPage() {
 
       <h2>1. What the Portal is for</h2>
       <p>
-        The Portal lets you search MLS® listings in Toronto and the GTA, save listings and searches, receive alerts,
+        The Portal lets you search MLS® listings in Toronto and the GTA, save listings and searches,
         plan tours and request showings. Creating an account does not by itself create a representation agreement or
         a brokerage relationship. That only happens when we both sign a written agreement.
       </p>

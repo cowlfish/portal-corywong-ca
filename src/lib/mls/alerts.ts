@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
+export { ALERTS_ENABLED } from "./alerts-config";
 import { propertyTypeWhere } from "./property-types";
 
 interface SearchCriteria {

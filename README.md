@@ -23,6 +23,15 @@ The TRREB IDX feed (AMPRE) is mirrored into Postgres by `src/lib/mls/sync/engine
   cut off resumes where it stopped; a run that finds another still running skips.
 - **Daily** (`/api/cron/mls-reconcile`): listings no longer in the feed (sold, expired, withdrawn) are marked
   `DELETED`. The IDX feed drops them rather than sending a status change.
+- **Field names**: TRREB uses its own names for some fields (`OriginalEntryTimestamp` for the list date,
+  `CityRegion` for community, `CountyOrParish` for area); see `mapListing` in the AMPRE provider. Listings
+  saved before these were mapped are refreshed by `backfillListingDetails` as part of the cron jobs.
+- **Locations**: the IDX feed withholds coordinates, so listings are placed at their postal code's centre
+  using GeoNames data (CC BY 4.0) in `public/geo/postal/`. Rebuild it with
+  `node scripts/build-postal-shards.mjs CA_full.txt` (from https://download.geonames.org/export/zip/CA_full.csv.zip).
+- **Open houses** come from the feed's OpenHouse resource and are refreshed hourly. **Rooms** (about 110M
+  records in the feed) are fetched live on listing pages, like the photo gallery.
+- **Alerts** are switched off (`src/lib/mls/alerts-config.ts`).
 - **Photos**: only the cover photo is stored (all ~40 per listing would be several GB). Listing pages fetch the
   full gallery from the feed live.
 - **Catching up a large backlog** (more than a few thousand changes): run it from your machine instead of

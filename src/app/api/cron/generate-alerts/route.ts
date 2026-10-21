@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateAlerts } from "@/lib/mls/alerts";
+import { ALERTS_ENABLED, generateAlerts } from "@/lib/mls/alerts";
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -7,6 +7,8 @@ export async function GET(request: NextRequest) {
   if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  if (!ALERTS_ENABLED) return NextResponse.json({ ok: true, disabled: true });
 
   try {
     const result = await generateAlerts();

@@ -2,21 +2,23 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import ListingDetailClient from "./ListingDetailClient";
 import { createProvider } from "@/lib/mls/providers";
+import type { MlsFeedProvider } from "@/lib/mls/types";
 
-// The mirror stores only each listing's cover photo, so the gallery comes from the feed.
-// Falls back to the stored photo if the feed is slow or unavailable.
-async function livePhotos(listingKey: string) {
+// Photos and rooms come from the feed live: the mirror keeps only the cover photo, and the
+// feed's room records (~110M) are too many to copy. Falls back to stored data if the feed is
+// slow or unavailable.
+async function fromFeed<T>(fetcher: (p: MlsFeedProvider) => Promise<T>): Promise<T | null> {
   if (!process.env.AMPRE_API_TOKEN) return null;
   try {
     const provider = await createProvider("ampre-reso", {
       apiUrl: process.env.AMPRE_API_URL ?? "https://query.ampre.ca/odata",
       apiToken: process.env.AMPRE_API_TOKEN,
     });
-    const photos = await Promise.race([
-      provider.fetchListingPhotos(listingKey),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500)),
+    return await Promise.race([
+      fetcher(provider),
+      // Generous enough for a cold start; the page waits this long at most
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
     ]);
-    return photos && photos.length > 0 ? photos : null;
   } catch {
     return null;
   }
@@ -60,10 +62,25 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
 
   if (!listing) notFound();
 
-  const gallery = await livePhotos(listing.listingKey);
-  const withPhotos = gallery
-    ? {
-        ...listing,
+  const [livePhotos, liveRooms] = await Promise.all([
+    fromFeed((p) => p.fetchListingPhotos(listing.listingKey)),
+    listing.rooms.length === 0 ? fromFeed((p) => p.fetchListingRooms(listing.listingKey)) : Promise.resolve(null),
+  ]);
+  const gallery = livePhotos && livePhotos.length > 0 ? livePhotos : null;
+  const rooms = liveRooms?.map((r, i) => ({
+    id: r.roomKey || `room-${i}`,
+    listingId: listing.id,
+    roomKey: r.roomKey,
+    roomType: r.roomType ?? null,
+    roomLevel: r.roomLevel ?? null,
+    roomDimensions: r.roomDimensions ?? null,
+    roomArea: r.roomArea ?? null,
+    roomDescription: r.roomDescription ?? null,
+  }));
+  const withPhotos = {
+    ...listing,
+    ...(rooms && rooms.length > 0 && { rooms }),
+    ...(gallery && {
         photos: gallery.map((p, i) => ({
           id: p.mediaKey || `photo-${i}`,
           listingId: listing.id,
@@ -73,8 +90,8 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           width: p.width ?? null,
           height: p.height ?? null,
         })),
-      }
-    : listing;
+    }),
+  };
 
   const serialized = JSON.parse(
     JSON.stringify(withPhotos, (_key, value) =>

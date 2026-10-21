@@ -94,6 +94,49 @@ export class AmpreResoProvider implements MlsFeedProvider {
     }
   }
 
+  async fetchListingsByKeys(listingKeys: string[]): Promise<MlsFeedListing[]> {
+    const out: MlsFeedListing[] = [];
+    for (let i = 0; i < listingKeys.length; i += DELTA_PAGE_SIZE) {
+      const filter = listingKeys
+        .slice(i, i + DELTA_PAGE_SIZE)
+        .map((k) => `ListingKey eq '${k.replace(/'/g, "''")}'`)
+        .join(" or ");
+      const data = await this.request(
+        `/Property?$filter=${encodeURIComponent(filter)}&$expand=${encodeURIComponent(MEDIA_EXPAND)}&$top=${DELTA_PAGE_SIZE}`
+      );
+      out.push(...((data.value ?? []) as Record<string, unknown>[]).map((r) => this.mapListing(r)));
+    }
+    return out;
+  }
+
+  async fetchUpcomingOpenHouses(): Promise<(MlsFeedOpenHouse & { listingKey: string })[]> {
+    const today = new Date().toISOString().slice(0, 10);
+    const out: (MlsFeedOpenHouse & { listingKey: string })[] = [];
+    let after: string | null = null;
+    for (;;) {
+      const clauses = [`OpenHouseDate ge ${today}`, "OpenHouseStatus eq 'Active'"];
+      if (after) clauses.push(`OpenHouseKey gt '${after}'`);
+      const data = await this.request(
+        `/OpenHouse?$filter=${encodeURIComponent(clauses.join(" and "))}&$orderby=OpenHouseKey&$top=${BATCH_SIZE}`
+      );
+      const rows = (data.value ?? []) as Record<string, unknown>[];
+      for (const r of rows) {
+        const [oh] = this.mapOpenHouses([r]);
+        if (oh && !isNaN(oh.startDate.getTime()) && !isNaN(oh.endDate.getTime())) {
+          out.push({ ...oh, listingKey: String(r.ListingKey) });
+        }
+      }
+      if (rows.length < BATCH_SIZE) return out;
+      after = String(rows[rows.length - 1].OpenHouseKey);
+    }
+  }
+
+  async fetchListingRooms(listingKey: string): Promise<MlsFeedRoom[]> {
+    const filter = `ListingKey eq '${listingKey.replace(/'/g, "''")}'`;
+    const data = await this.request(`/PropertyRooms?$filter=${encodeURIComponent(filter)}&$orderby=Order&$top=100`);
+    return this.mapRooms(data.value as Record<string, unknown>[] | undefined);
+  }
+
   async fetchListingPhotos(listingKey: string): Promise<MlsFeedPhoto[]> {
     const filter = `ResourceRecordKey eq '${listingKey.replace(/'/g, "''")}' and ${PHOTO_FILTER}`;
     const data = await this.request(
@@ -223,17 +266,18 @@ export class AmpreResoProvider implements MlsFeedProvider {
       postalCode: this.str(raw.PostalCode),
       country: this.str(raw.Country),
       municipality: this.str(raw.Municipality ?? raw.CountyOrParish),
-      community: this.str(raw.CommunityName),
-      neighbourhood: this.str(raw.SubdivisionName),
-      area: this.str(raw.MLSAreaMajor),
+      // TRREB's names differ from the RESO defaults: community is CityRegion ("Westdale"),
+      // the broader region is CountyOrParish ("Hamilton")
+      community: this.str(raw.CommunityName ?? raw.CityRegion),
+      neighbourhood: this.str(raw.SubdivisionName ?? raw.CityRegion),
+      area: this.str(raw.MLSAreaMajor ?? raw.CountyOrParish),
 
       latitude: this.dec(raw.Latitude, 3),
       longitude: this.dec(raw.Longitude, 3),
 
-      bedrooms: raw.BedroomsTotal ? Number(raw.BedroomsTotal) : undefined,
-      bedroomsPlus: raw.BedroomsAboveGrade
-        ? Number(raw.BedroomsAboveGrade)
-        : undefined,
+      // TRREB convention "3+1": above grade plus below grade
+      bedrooms: this.int(raw.BedroomsAboveGrade) ?? this.int(raw.BedroomsTotal),
+      bedroomsPlus: this.int(raw.BedroomsBelowGrade),
       bathrooms: raw.BathroomsTotalInteger
         ? Number(raw.BathroomsTotalInteger)
         : undefined,
@@ -256,17 +300,16 @@ export class AmpreResoProvider implements MlsFeedProvider {
       balcony: this.str(raw.Balcony),
       locker: this.str(raw.Locker),
 
-      listDate: raw.ListingContractDate
-        ? new Date(raw.ListingContractDate as string)
-        : undefined,
+      // TRREB doesn't send ListingContractDate; OriginalEntryTimestamp is when it was listed
+      listDate: this.date(raw.ListingContractDate ?? raw.OriginalEntryTimestamp),
       soldDate: raw.CloseDate ? new Date(raw.CloseDate as string) : undefined,
       expiryDate: raw.ExpirationDate
         ? new Date(raw.ExpirationDate as string)
         : undefined,
-      daysOnMarket: raw.DaysOnMarket ? Number(raw.DaysOnMarket) : undefined,
+      daysOnMarket: this.int(raw.DaysOnMarket) ?? this.daysSince(raw.ListingContractDate ?? raw.OriginalEntryTimestamp),
       virtualTourUrl: this.str(raw.VirtualTourURLUnbranded ?? raw.VirtualTourURLBranded),
       publicRemarks: this.str(raw.PublicRemarks),
-      extrasRemarks: this.str(raw.Extras),
+      extrasRemarks: this.str(raw.PublicRemarksExtras ?? raw.Extras),
       featuresRemarks: this.str(raw.Features),
 
       taxAmount: this.dec(raw.TaxAnnualAmount, 8),
@@ -323,6 +366,23 @@ export class AmpreResoProvider implements MlsFeedProvider {
     return n;
   }
 
+  private int(value: unknown): number | undefined {
+    if (value === null || value === undefined || value === "") return undefined;
+    const n = Number(value);
+    return Number.isInteger(n) && n >= 0 && n < 1000 ? n : undefined;
+  }
+
+  private date(value: unknown): Date | undefined {
+    if (typeof value !== "string" || !value) return undefined;
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? undefined : d;
+  }
+
+  private daysSince(value: unknown): number | undefined {
+    const d = this.date(value);
+    return d ? Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000)) : undefined;
+  }
+
   private mapStatus(status?: string): MlsFeedListing["status"] {
     const map: Record<string, MlsFeedListing["status"]> = {
       Active: "Active",
@@ -358,7 +418,9 @@ export class AmpreResoProvider implements MlsFeedProvider {
       roomKey: String(r.RoomKey ?? ""),
       roomType: r.RoomType as string | undefined,
       roomLevel: r.RoomLevel as string | undefined,
-      roomDimensions: r.RoomDimensions as string | undefined,
+      roomDimensions:
+        (r.RoomDimensions as string | undefined) ??
+        (r.RoomLength && r.RoomWidth ? `${r.RoomLength} x ${r.RoomWidth} ${r.RoomLengthWidthUnits === "Meters" ? "m" : ""}`.trim() : undefined),
       roomArea: this.dec(r.RoomArea, 8),
       roomDescription: r.RoomDescription as string | undefined,
     }));
@@ -372,7 +434,8 @@ export class AmpreResoProvider implements MlsFeedProvider {
       startDate: new Date(oh.OpenHouseStartTime as string),
       endDate: new Date(oh.OpenHouseEndTime as string),
       remarks: oh.OpenHouseRemarks as string | undefined,
-      type: oh.OpenHouseType as string | undefined,
+      // "Public"/"Broker" plus "In Person"/"Virtual"
+      type: [oh.OpenHouseType, oh.OpenHouseFormat].filter(Boolean).join(" · ") || undefined,
     }));
   }
 }

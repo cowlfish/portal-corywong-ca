@@ -79,6 +79,7 @@ export default function ListingsPage() {
 function useInitialFilters(): FilterValues {
   const sp = useSearchParams();
   return {
+    transaction: sp.get("transaction") === "lease" ? "lease" : "sale",
     q: sp.get("q") || "",
     minPrice: sp.get("minPrice") || "",
     maxPrice: sp.get("maxPrice") || "",
@@ -114,8 +115,10 @@ function ListingsContent() {
 
       const params = new URLSearchParams();
       params.set("page", String(page));
-      params.set("limit", "24");
+      // The map shows everything in view (up to 500 pins); the list pages 24 at a time
+      params.set("limit", bounds && view === "map" ? "500" : "24");
 
+      params.set("transaction", f.transaction === "lease" ? "lease" : "sale");
       if (f.q) params.set("q", f.q);
       if (f.minPrice) params.set("minPrice", f.minPrice);
       if (f.maxPrice) params.set("maxPrice", f.maxPrice);
@@ -236,7 +239,7 @@ function ListingsContent() {
 
         {view === "map" && (
           <div className="h-[calc(100vh-320px)] min-h-[500px] rounded-lg overflow-hidden border border-slate-200">
-            <ListingMap listings={listings} onBoundsChange={handleBoundsChange} />
+            <ListingMap listings={listings} onBoundsChange={handleBoundsChange} fitKey={JSON.stringify(filters)} />
           </div>
         )}
 
@@ -260,7 +263,8 @@ function ListingsContent() {
               )}
             </div>
             <div className="w-full lg:w-1/2 h-[400px] lg:h-auto rounded-lg overflow-hidden border border-slate-200">
-              <ListingMap listings={listings} onBoundsChange={handleBoundsChange} />
+              {/* Split view pins the cards on the left, so it refits per page of results */}
+              <ListingMap listings={listings} fitKey={`${JSON.stringify(filters)}:${pagination.page}`} />
             </div>
           </div>
         )}

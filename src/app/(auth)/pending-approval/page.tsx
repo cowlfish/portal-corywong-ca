@@ -49,7 +49,7 @@ export default function PendingApprovalPage() {
       <h2 className="text-xl font-semibold text-slate-900 mb-2">Thanks for signing up</h2>
       <p className="text-slate-600 mb-6">
         Cory has been notified and will review your account personally. Once it&apos;s approved you&apos;ll have
-        saved searches, alerts, lists and tour planning.
+        saved searches, lists and tour planning.
       </p>
 
       <div className="bg-slate-50 rounded-md p-4 mb-6 text-left">

@@ -97,7 +97,11 @@ export function middleware(req: NextRequest) {
       }
     }
 
-    const isAgentRoute = pathname.startsWith("/agent/") || pathname.startsWith("/api/agent/");
+    const isAgentRoute =
+      pathname.startsWith("/agent/") ||
+      pathname.startsWith("/api/agent/") ||
+      pathname.startsWith("/admin") ||
+      pathname.startsWith("/api/admin/");
     if (isAgentRoute && role !== "AGENT" && role !== "ADMIN") {
       if (pathname.startsWith("/api/")) {
         return addSecurityHeaders(

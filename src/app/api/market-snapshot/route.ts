@@ -15,15 +15,17 @@ export async function GET(request: Request) {
   const minBeds = url.searchParams.get("minBeds");
   const minBaths = url.searchParams.get("minBaths");
 
-  const where: Prisma.MlsListingWhereInput = { status: "ACTIVE" };
+  // Sales only: monthly rents and $0 placeholders would skew every price statistic
+  const where: Prisma.MlsListingWhereInput = { status: "ACTIVE", transactionType: "For Sale" };
   if (area) where.area = area;
   if (neighbourhood) where.neighbourhood = neighbourhood;
   if (propertyType) where.propertyType = propertyType;
   if (minPrice || maxPrice) {
-    where.listPrice = {};
+    where.listPrice = { gt: 0 };
     if (minPrice) where.listPrice.gte = new Prisma.Decimal(minPrice);
     if (maxPrice) where.listPrice.lte = new Prisma.Decimal(maxPrice);
   }
+  if (!where.listPrice) where.listPrice = { gt: 0 };
   if (minBeds) where.bedrooms = { gte: parseInt(minBeds) };
   if (minBaths) where.bathrooms = { gte: parseInt(minBaths) };
 

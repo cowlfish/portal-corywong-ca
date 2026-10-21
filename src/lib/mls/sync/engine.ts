@@ -1,5 +1,6 @@
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/client";
+import { locatePostalCode } from "../geocode";
 import type {
   MlsFeedProvider,
   MlsFeedDelta,
@@ -322,6 +323,15 @@ async function upsertListing(
     select: { id: true, listPrice: true },
   });
 
+  // The feed has no coordinates; place the listing at its postal code
+  if (listing.latitude == null || listing.longitude == null) {
+    const location = await locatePostalCode(listing.postalCode);
+    if (location) {
+      listing.latitude = location.latitude;
+      listing.longitude = location.longitude;
+    }
+  }
+
   const data = {
     listingKey: listing.listingKey,
     boardId: listing.boardId,
@@ -551,4 +561,100 @@ export async function pruneRemovedListings(olderThanDays = PRUNE_AFTER_DAYS): Pr
     const { count } = await prisma.mlsListing.deleteMany({ where: { id: { in: batch.map((l) => l.id) } } });
     pruned += count;
   }
+}
+
+// Listings saved before the TRREB field names were mapped (2026-10-21) are missing their
+// list date, community and area. Re-fetches them from the feed in batches until none are
+// left; each pass skips listings touched in the last 6 hours so ones the feed can't fill
+// don't loop.
+export async function backfillListingDetails(
+  provider: MlsFeedProvider,
+  { maxListings = 500, maxMs = 20_000 } = {}
+): Promise<{ refreshed: number; remaining: number }> {
+  const startTime = Date.now();
+  const where = {
+    status: "ACTIVE" as const,
+    listDate: null,
+    updatedAt: { lt: new Date(Date.now() - 6 * 60 * 60 * 1000) },
+  };
+  let refreshed = 0;
+  while (refreshed < maxListings && Date.now() - startTime < maxMs) {
+    const batch = await prisma.mlsListing.findMany({ where, select: { listingKey: true }, take: 50 });
+    if (batch.length === 0) break;
+    const fresh = await provider.fetchListingsByKeys(batch.map((l) => l.listingKey));
+    for (const listing of fresh) {
+      await upsertListing(listing);
+      refreshed++;
+    }
+    // Keys the feed didn't return are left for the daily reconcile; mark them touched
+    const returned = new Set(fresh.map((l) => l.listingKey));
+    const missing = batch.map((l) => l.listingKey).filter((k) => !returned.has(k));
+    if (missing.length) {
+      await prisma.mlsListing.updateMany({ where: { listingKey: { in: missing } }, data: { updatedAt: new Date() } });
+    }
+  }
+  const remaining = await prisma.mlsListing.count({ where });
+  return { refreshed, remaining };
+}
+
+// Places listings saved without coordinates at their postal code. No feed calls: the lookup
+// is local data, so this is cheap enough to clear a large backlog in one daily run.
+export async function geocodeListings({ maxListings = 2000, maxMs = 15_000 } = {}): Promise<{ located: number; remaining: number }> {
+  const startTime = Date.now();
+  const where = {
+    status: "ACTIVE" as const,
+    latitude: null,
+    postalCode: { not: null },
+    updatedAt: { lt: new Date(Date.now() - 6 * 60 * 60 * 1000) },
+  };
+  let located = 0;
+  let processed = 0;
+  while (processed < maxListings && Date.now() - startTime < maxMs) {
+    const batch = await prisma.mlsListing.findMany({ where, select: { id: true, postalCode: true }, take: 200 });
+    if (batch.length === 0) break;
+    const unknown: string[] = [];
+    for (const l of batch) {
+      processed++;
+      const location = await locatePostalCode(l.postalCode);
+      if (!location) {
+        unknown.push(l.id);
+        continue;
+      }
+      await prisma.mlsListing.update({
+        where: { id: l.id },
+        data: { latitude: location.latitude, longitude: location.longitude },
+      });
+      located++;
+    }
+    // Postal codes outside the data (e.g. other provinces): don't retry for 6 hours
+    if (unknown.length) {
+      await prisma.mlsListing.updateMany({ where: { id: { in: unknown } }, data: { updatedAt: new Date() } });
+    }
+  }
+  const remaining = await prisma.mlsListing.count({ where });
+  return { located, remaining };
+}
+
+// Open houses live in their own feed resource (a few thousand upcoming at any time), so
+// they're refreshed wholesale rather than per listing.
+export async function syncOpenHouses(provider: MlsFeedProvider): Promise<{ openHouses: number; listings: number }> {
+  const upcoming = await provider.fetchUpcomingOpenHouses();
+  const keys = [...new Set(upcoming.map((o) => o.listingKey))];
+  const idByKey = new Map<string, string>();
+  for (let i = 0; i < keys.length; i += 1000) {
+    const rows = await prisma.mlsListing.findMany({
+      where: { listingKey: { in: keys.slice(i, i + 1000) } },
+      select: { id: true, listingKey: true },
+    });
+    for (const r of rows) idByKey.set(r.listingKey, r.id);
+  }
+  const data = upcoming
+    .filter((o) => idByKey.has(o.listingKey))
+    .map((o) => ({ listingId: idByKey.get(o.listingKey)!, startDate: o.startDate, endDate: o.endDate, remarks: o.remarks, type: o.type }));
+
+  await prisma.$transaction([
+    prisma.mlsOpenHouse.deleteMany({}),
+    prisma.mlsOpenHouse.createMany({ data }),
+  ]);
+  return { openHouses: data.length, listings: new Set(data.map((d) => d.listingId)).size };
 }

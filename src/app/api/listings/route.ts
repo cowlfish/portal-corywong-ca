@@ -6,7 +6,9 @@ export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
 
   const page = Math.max(1, parseInt(sp.get("page") || "1", 10));
-  const limit = Math.min(50, Math.max(1, parseInt(sp.get("limit") || "24", 10)));
+  // Map requests (with bounds) may ask for up to 500 pins; lists page in smaller chunks
+  const maxLimit = sp.get("bounds") ? 500 : 50;
+  const limit = Math.min(maxLimit, Math.max(1, parseInt(sp.get("limit") || "24", 10)));
   const skip = (page - 1) * limit;
 
   const sortField = sp.get("sort") || "listDate";
@@ -14,10 +16,19 @@ export async function GET(request: NextRequest) {
 
   const where: Record<string, unknown> = { status: "ACTIVE" };
 
+  // Sales by default: about a quarter of the feed is monthly rents, which would otherwise
+  // fill every low price range. "all" is for callers that want both.
+  const transaction = sp.get("transaction") || "sale";
+  if (transaction === "sale") where.transactionType = "For Sale";
+  else if (transaction === "lease") where.transactionType = { in: ["For Lease", "For Sub-Lease"] };
+
+  // Placeholder prices from listing brokerages ($0, $1 "price on request"). Leases keep
+  // small values: some commercial leases are priced per square foot ($10.50).
+  where.listPrice = { gte: transaction === "lease" ? 1 : 1000 };
+
   const minPrice = sp.get("minPrice");
   const maxPrice = sp.get("maxPrice");
   if (minPrice || maxPrice) {
-    where.listPrice = {};
     if (minPrice) (where.listPrice as Record<string, unknown>).gte = parseFloat(minPrice);
     if (maxPrice) (where.listPrice as Record<string, unknown>).lte = parseFloat(maxPrice);
   }
@@ -86,13 +97,23 @@ export async function GET(request: NextRequest) {
     sqft: "sqft",
     daysOnMarket: "daysOnMarket",
   };
-  const orderByField = allowedSorts[sortField] || "listDate";
+  let orderByField = allowedSorts[sortField] || "listDate";
+  let orderDir: "asc" | "desc" = sortDir;
+  // Days on market is derived from the list date (fewest days = most recently listed)
+  if (orderByField === "daysOnMarket") {
+    orderByField = "listDate";
+    orderDir = sortDir === "asc" ? "desc" : "asc";
+  }
 
   try {
     const [listings, total] = await Promise.all([
       prisma.mlsListing.findMany({
         where,
-        orderBy: { [orderByField]: sortDir },
+        // Listings without the sort value go last instead of first (list price is never null)
+        orderBy: [
+          { [orderByField]: orderByField === "listPrice" ? orderDir : { sort: orderDir, nulls: "last" } },
+          { id: "asc" },
+        ],
         skip,
         take: limit,
         select: {
@@ -102,6 +123,7 @@ export async function GET(request: NextRequest) {
           status: true,
           propertyType: true,
           propertySubType: true,
+          transactionType: true,
           streetNumber: true,
           streetName: true,
           streetSuffix: true,

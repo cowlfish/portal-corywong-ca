@@ -8,6 +8,7 @@ import PhotoCarousel from "@/components/listings/PhotoCarousel";
 import IdxDisclaimer from "@/components/listings/IdxDisclaimer";
 import CommentThread from "@/components/listings/CommentThread";
 import ShowingRequestForm from "@/components/listings/ShowingRequestForm";
+import { daysOnMarket } from "@/lib/mls/days-on-market";
 
 const ListingMap = dynamic(() => import("@/components/listings/ListingMap"), {
   ssr: false,
@@ -136,46 +137,87 @@ function Spec({ label, value }: { label: string; value: string | number | null |
   );
 }
 
-function SaveToListButton({ mlsNumber }: { mlsNumber: string }) {
+// Saves to the client's account (My Lists). Visitors who aren't signed in are invited to
+// create an account, which is also how they become a lead for Cory.
+function SaveToListButton({ listingId, mlsNumber }: { listingId: string; mlsNumber: string }) {
+  const [state, setState] = useState<"loading" | "signed-out" | "pending" | "ready">("loading");
   const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [prompt, setPrompt] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    try {
-      const favs: string[] = JSON.parse(localStorage.getItem("cw_saved_listings") || "[]");
-      setSaved(favs.includes(mlsNumber));
-    } catch { /* ignore */ }
-  }, [mlsNumber]);
+    fetch("/api/favorites")
+      .then(async (r) => {
+        if (r.status === 401) return setState("signed-out");
+        if (r.status === 403) return setState("pending");
+        const d = await r.json();
+        setSaved((d.favorites ?? []).some((f: { listingId: string }) => f.listingId === listingId));
+        setState("ready");
+      })
+      .catch(() => setState("signed-out"));
+  }, [listingId]);
 
-  function toggle() {
+  async function toggle() {
+    if (state !== "ready") {
+      setPrompt(true);
+      return;
+    }
+    setBusy(true);
+    setFailed(false);
     try {
-      const favs: string[] = JSON.parse(localStorage.getItem("cw_saved_listings") || "[]");
-      const next = saved ? favs.filter((f) => f !== mlsNumber) : [...favs, mlsNumber];
-      localStorage.setItem("cw_saved_listings", JSON.stringify(next));
-      setSaved(!saved);
-    } catch { /* ignore */ }
+      const res = saved
+        ? await fetch(`/api/favorites?listingId=${listingId}`, { method: "DELETE" })
+        : await fetch("/api/favorites", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ listingId }),
+          });
+      if (res.ok) setSaved(!saved);
+      else setFailed(true);
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
   }
 
+  const back = encodeURIComponent(`/listings/${mlsNumber}`);
   return (
-    <button
-      onClick={toggle}
-      className={`w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-md border transition-colors ${
-        saved
-          ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
-      }`}
-    >
-      <svg className="w-5 h-5" fill={saved ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+    <div>
+      <button
+        onClick={toggle}
+        disabled={busy || state === "loading"}
+        className={`w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-md border transition-colors disabled:opacity-60 ${
+          saved
+            ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+            : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+        }`}
+      >
+        <svg className="w-5 h-5" fill={saved ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
       </svg>
-      {saved ? "Saved to List" : "Save to List"}
-    </button>
+        {saved ? "Saved to My Lists" : "Save to My Lists"}
+      </button>
+      {prompt && state === "signed-out" && (
+        <p className="mt-2 text-xs text-slate-600">
+          <Link href={`/register?redirect=${back}`} className="underline text-slate-900">Create a free account</Link> or{" "}
+          <Link href={`/login?redirect=${back}`} className="underline text-slate-900">sign in</Link> to save listings and searches.
+        </p>
+      )}
+      {failed && <p className="mt-2 text-xs text-red-600">Couldn&apos;t update My Lists. Please try again.</p>}
+      {prompt && state === "pending" && (
+        <p className="mt-2 text-xs text-slate-600">You can save listings once Cory approves your account.</p>
+      )}
+    </div>
   );
 }
 
 export default function ListingDetailClient({ listing }: { listing: Listing }) {
   const l = listing;
   const address = formatAddress(l);
-  const totalBeds = (l.bedrooms || 0) + (l.bedroomsPlus || 0);
+  // TRREB style: "3+1" is above grade plus below grade
+  const beds = l.bedrooms ? `${l.bedrooms}${l.bedroomsPlus ? `+${l.bedroomsPlus}` : ""}` : null;
   const totalBaths = (l.bathrooms || 0) + (l.bathroomsHalf ? l.bathroomsHalf * 0.5 : 0);
   const hasGeo = l.latitude != null && l.longitude != null;
 
@@ -194,7 +236,10 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
           <div>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{formatPrice(l.listPrice)}</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                  {formatPrice(l.listPrice)}
+                  {l.transactionType?.includes("Lease") && <span className="text-lg font-medium text-slate-500">/month</span>}
+                </h1>
                 <p className="text-lg text-slate-700 mt-1">{address || "Address unavailable"}</p>
                 <p className="text-slate-500">
                   {[l.city, l.province, l.postalCode].filter(Boolean).join(", ")}
@@ -211,10 +256,10 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-slate-600">
-              {totalBeds > 0 && <span className="flex items-center gap-1">{totalBeds} Beds</span>}
+              {beds && <span className="flex items-center gap-1">{beds} Beds</span>}
               {totalBaths > 0 && <span className="flex items-center gap-1">{totalBaths} Baths</span>}
               <span>{formatSqft(l)}</span>
-              {l.propertyType && <span>{l.propertyType}</span>}
+              {(l.propertySubType || l.propertyType) && <span>{l.propertySubType || l.propertyType}</span>}
               {l.yearBuilt && <span>Built {l.yearBuilt}</span>}
             </div>
           </div>
@@ -261,7 +306,7 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
                 <Spec label="Parking" value={l.parkingSpaces != null ? `${l.parkingSpaces} spaces` : null} />
                 <Spec label="Garage" value={l.garageType ? `${l.garageType}${l.garageSpaces ? ` (${l.garageSpaces})` : ""}` : null} />
                 <Spec label="Maintenance Fee" value={l.maintenanceFee ? formatPrice(l.maintenanceFee) + "/mo" : null} />
-                <Spec label="Condo Style" value={l.condoStyle} />
+                <Spec label="Style" value={l.condoStyle} />
                 <Spec label="Exposure" value={l.condoExposure} />
                 <Spec label="Balcony" value={l.balcony} />
                 <Spec label="Locker" value={l.locker} />
@@ -380,9 +425,14 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
                     city: l.city,
                     bedrooms: l.bedrooms,
                     bathrooms: l.bathrooms,
+                    transactionType: l.transactionType,
                   }]}
+                  zoom={15}
                 />
               </div>
+              <p className="mt-2 text-xs text-slate-500">
+                Approximate location, based on the postal code{l.postalCode ? ` (${l.postalCode})` : ""}.
+              </p>
             </div>
           )}
 
@@ -393,7 +443,7 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
           <div className="bg-white border border-slate-200 rounded-lg p-6 sticky top-6 space-y-4">
             <ShowingRequestForm listingId={l.id} address={`${address}, ${l.city || ""}`.replace(/, $/, "")} />
 
-            <SaveToListButton mlsNumber={l.mlsNumber} />
+            <SaveToListButton listingId={l.id} mlsNumber={l.mlsNumber} />
 
             <div className="border-t border-slate-200 pt-4">
               <h3 className="text-sm font-medium text-slate-900 mb-3">Contact Agent</h3>
@@ -427,7 +477,7 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
               <div className="space-y-1 text-xs text-slate-500">
                 <p>MLS&reg; {l.mlsNumber}</p>
                 {l.listDate && <p>Listed: {new Date(l.listDate).toLocaleDateString("en-CA")}</p>}
-                {l.daysOnMarket != null && <p>{l.daysOnMarket} days on market</p>}
+                {daysOnMarket(l.listDate, l.daysOnMarket) != null && <p>{daysOnMarket(l.listDate, l.daysOnMarket)} days on market</p>}
                 {l.listOfficeName && <p>Listed by: {l.listOfficeName}</p>}
                 {l.listAgentName && <p>Agent: {l.listAgentName}</p>}
                 {l.coListAgentName && <p>Co-list Agent: {l.coListAgentName}</p>}

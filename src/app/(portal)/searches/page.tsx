@@ -2,6 +2,7 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { PROPERTY_TYPES, propertyTypeLabel } from "@/lib/mls/property-types";
+import { ALERTS_ENABLED } from "@/lib/mls/alerts-config";
 
 interface SavedSearch {
   id: string;
@@ -89,7 +90,7 @@ export default function SearchesPage() {
       <div>
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-slate-900">Saved Searches</h1>
-          <p className="text-slate-500 mt-1">Save your search criteria and get alerted when new listings match</p>
+          <p className="text-slate-500 mt-1">Save your search criteria to run them again any time</p>
         </div>
         <div className="space-y-3">
           {[1, 2].map((i) => (
@@ -108,7 +109,7 @@ export default function SearchesPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Saved Searches</h1>
-          <p className="text-slate-500 mt-1">Save your search criteria and get alerted when new listings match</p>
+          <p className="text-slate-500 mt-1">Save your search criteria to run them again any time</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
@@ -197,21 +198,6 @@ export default function SearchesPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-4 pt-2">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" name="alertEnabled" className="rounded border-slate-300" />
-                <span className="text-sm text-slate-700">Portal alerts for new matches (checked daily)</span>
-              </label>
-              <select
-                name="alertFrequency"
-                className="px-3 py-1 border border-slate-300 rounded-md text-sm text-slate-900"
-              >
-                <option value="INSTANT">Instant</option>
-                <option value="DAILY">Daily</option>
-                <option value="WEEKLY">Weekly</option>
-              </select>
-            </div>
-
             <button
               type="submit"
               className="px-4 py-2 bg-slate-900 text-white rounded-md font-medium hover:bg-slate-800 transition-colors"
@@ -245,7 +231,7 @@ export default function SearchesPage() {
                 <div className="font-semibold text-slate-900">{search.name}</div>
                 <div className="text-sm text-slate-500 mt-0.5">{formatCriteria(search.criteria)}</div>
                 <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
-                  {search.alertEnabled && (
+                  {ALERTS_ENABLED && search.alertEnabled && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full border border-amber-200">
                       Alerts: {search.alertFrequency.toLowerCase()}
                     </span>

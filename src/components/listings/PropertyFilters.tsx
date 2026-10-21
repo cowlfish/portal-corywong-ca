@@ -4,6 +4,8 @@ import { useCallback, useState } from "react";
 import { PROPERTY_TYPES, propertyTypeLabel } from "@/lib/mls/property-types";
 
 export interface FilterValues {
+  // "sale" or "lease"; the feed mixes both and rents would swamp price filters
+  transaction: string;
   q: string;
   minPrice: string;
   maxPrice: string;
@@ -19,6 +21,7 @@ export interface FilterValues {
 }
 
 const INITIAL_FILTERS: FilterValues = {
+  transaction: "sale",
   q: "",
   minPrice: "",
   maxPrice: "",
@@ -41,6 +44,13 @@ const SORT_OPTIONS = [
   { value: "daysOnMarket-asc", label: "Days on Market" },
   { value: "bedrooms", label: "Bedrooms" },
   { value: "sqft", label: "Square Feet" },
+];
+
+const LEASE_PRICE_PRESETS = [
+  { label: "Under $2,500/mo", min: "", max: "2500" },
+  { label: "$2,500–$3,500/mo", min: "2500", max: "3500" },
+  { label: "$3,500–$5,000/mo", min: "3500", max: "5000" },
+  { label: "$5,000+/mo", min: "5000", max: "" },
 ];
 
 const PRICE_PRESETS = [
@@ -99,8 +109,50 @@ export default function PropertyFilters({ filters, onApply, total }: Props) {
     }
   }
 
+  const pricePresets = local.transaction === "lease" ? LEASE_PRICE_PRESETS : PRICE_PRESETS;
+  const activeTerms = (
+    [
+      ["city", "City"],
+      ["neighbourhood", "Area"],
+    ] as const
+  ).filter(([field]) => local[field]);
+
   return (
     <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-lg p-4">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="inline-flex rounded-md border border-slate-300 p-0.5" role="group" aria-label="Buy or rent">
+          {(
+            [
+              ["sale", "Buy"],
+              ["lease", "Rent"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={local.transaction === value}
+              // Price ranges don't carry over between sale prices and monthly rents
+              onClick={() => applyChip({ transaction: value, minPrice: "", maxPrice: "" })}
+              className={`px-4 py-1 text-sm font-medium rounded ${
+                local.transaction === value ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {activeTerms.map(([field, label]) => (
+          <button
+            key={field}
+            type="button"
+            onClick={() => applyChip({ [field]: "" })}
+            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200"
+            aria-label={`Clear ${label.toLowerCase()} filter`}
+          >
+            {label}: {local[field]} <span aria-hidden="true">×</span>
+          </button>
+        ))}
+      </div>
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1">
           <input
@@ -140,8 +192,9 @@ export default function PropertyFilters({ filters, onApply, total }: Props) {
         </button>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        {PRICE_PRESETS.map((p) => (
+      {/* On phones the presets fold behind "More Filters" so results show on the first screen */}
+      <div className={`mt-3 flex-wrap gap-2 ${expanded ? "flex" : "hidden sm:flex"}`}>
+        {pricePresets.map((p) => (
           <button
             key={p.label}
             type="button"

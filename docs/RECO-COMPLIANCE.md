@@ -70,9 +70,8 @@ Status of the `cloudflare-port` branch.
 
 **Open:**
 
-1. **Alert frequency does nothing.** The saved-search form offers Instant / Daily / Weekly, but
-   `generateAlerts` ignores the setting and runs once a day, and nothing sends email. Either build it or
-   remove the options. The check warns on "Instant" until then.
+1. **Alerts are switched off** (2026-10-21) until they match searches correctly, honour the chosen frequency
+   and send email. The site no longer offers or mentions them.
 2. **Privacy policy and terms: drafted, need review.** `/privacy` and `/terms` now exist (2026-10-20) and describe
    what the portal actually collects, including showing requests. Have the brokerage review both before launch.
 3. **REALTOR® / CREA membership.** The TRREB feed implies TRREB (and so CREA) membership. If Cory is a

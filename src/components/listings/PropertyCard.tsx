@@ -1,3 +1,4 @@
+import { daysOnMarket } from "@/lib/mls/days-on-market";
 import Link from "next/link";
 
 export interface PropertyCardListing {
@@ -6,6 +7,7 @@ export interface PropertyCardListing {
   listPrice: string | number;
   propertyType: string | null;
   propertySubType: string | null;
+  transactionType?: string | null;
   streetNumber: string | null;
   streetName: string | null;
   streetSuffix: string | null;
@@ -23,6 +25,7 @@ export interface PropertyCardListing {
   latitude: string | number | null;
   longitude: string | number | null;
   daysOnMarket: number | null;
+  listDate?: string | null;
   listOfficeName: string | null;
   photos: { photoUrl: string }[];
 }
@@ -54,7 +57,9 @@ export default function PropertyCard({ listing }: { listing: PropertyCardListing
   const address = formatAddress(listing);
   const sqft = formatSqft(listing);
 
-  const totalBeds = (listing.bedrooms || 0) + (listing.bedroomsPlus || 0);
+  const dom = daysOnMarket(listing.listDate, listing.daysOnMarket);
+  // TRREB style: "3+1" is above grade plus below grade
+  const beds = listing.bedrooms ? `${listing.bedrooms}${listing.bedroomsPlus ? `+${listing.bedroomsPlus}` : ""}` : null;
   const totalBaths = (listing.bathrooms || 0) + (listing.bathroomsHalf ? listing.bathroomsHalf * 0.5 : 0);
 
   return (
@@ -86,15 +91,18 @@ export default function PropertyCard({ listing }: { listing: PropertyCardListing
         </div>
       </div>
       <div className="p-4">
-        <div className="text-lg font-bold text-slate-900">{formatPrice(listing.listPrice)}</div>
+        <div className="text-lg font-bold text-slate-900">
+          {formatPrice(listing.listPrice)}
+          {listing.transactionType?.includes("Lease") && <span className="text-sm font-medium text-slate-500">/mo</span>}
+        </div>
         <div className="text-sm text-slate-700 mt-1 truncate">{address}</div>
         <div className="text-sm text-slate-500 truncate">
           {listing.city}
           {listing.neighbourhood ? `, ${listing.neighbourhood}` : ""}
         </div>
         <div className="flex items-center gap-3 mt-2 text-sm text-slate-600">
-          {totalBeds > 0 && (
-            <span>{totalBeds} {totalBeds === 1 ? "bed" : "beds"}</span>
+          {beds && (
+            <span>{beds} {beds === "1" ? "bed" : "beds"}</span>
           )}
           {totalBaths > 0 && (
             <span>{totalBaths} {totalBaths === 1 ? "bath" : "baths"}</span>
@@ -103,7 +111,7 @@ export default function PropertyCard({ listing }: { listing: PropertyCardListing
         </div>
         <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
           <span>MLS&reg; {listing.mlsNumber}</span>
-          {listing.daysOnMarket != null && <span>{listing.daysOnMarket}d on market</span>}
+          {dom != null && <span>{dom}d on market</span>}
         </div>
         {listing.listOfficeName && (
           <div className="mt-1 text-xs text-slate-400 truncate">

@@ -36,7 +36,7 @@
       // first (adds SPF/DKIM/DMARC on that subdomain only; corywong.ca mail stays on DreamHost).
       "name": "EMAIL",
       "allowed_sender_addresses": ["portal@notify.corywong.ca"],
-      "allowed_destination_addresses": ["cory@corywong.ca"]
+      "allowed_destination_addresses": ["cory.wong@trustwell.ca"]
     }
   ],
   "triggers": {
@@ -48,7 +48,7 @@
     "NEXT_PUBLIC_APP_NAME": "Cory Wong, Broker",
     "NEXT_PUBLIC_APP_URL": "https://portal.corywong.ca",
     // Where new sign-ups, tour requests and client comments are emailed
-    "NOTIFY_EMAIL": "cory@corywong.ca"
+    "NOTIFY_EMAIL": "cory.wong@trustwell.ca"
   },
   "observability": { "enabled": true }
 }

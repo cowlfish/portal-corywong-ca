@@ -141,7 +141,7 @@ ${report.soldComps.length > 0 ? `
 </div>
 
 <div class="footer">
-  Prepared by Cory Wong Real Estate &mdash; ${date}<br>
+  Prepared by Cory Wong, Broker, Trustwell Realty Inc., Brokerage &mdash; ${date}<br>
   This CMA is for informational purposes only and should not be considered an appraisal.
 </div>
 

@@ -1,13 +1,14 @@
 import Link from "next/link";
 import ComplianceFooter from "@/components/ComplianceFooter";
 import SearchBar from "@/components/listings/SearchBar";
+import BrokerageBar from "@/components/BrokerageBar";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-slate-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <span className="text-lg font-bold tracking-tight">Cory Wong Real Estate</span>
+          <span className="text-lg font-bold tracking-tight">Cory Wong</span>
           <div className="flex items-center gap-3">
             <Link
               href="/listings"
@@ -30,6 +31,7 @@ export default function Home() {
           </div>
         </div>
       </header>
+      <BrokerageBar />
 
       <main className="flex-1 flex items-center justify-center px-4">
         <div className="max-w-2xl w-full text-center">
@@ -38,7 +40,7 @@ export default function Home() {
           </h1>
           <p className="mt-4 text-lg text-slate-500 max-w-lg mx-auto">
             Search Toronto &amp; GTA properties from the MLS&reg; — save favourites,
-            schedule tours, and get instant alerts.
+            schedule tours, and get alerts for new listings.
           </p>
 
           <div className="mt-8 max-w-xl mx-auto">
@@ -83,7 +85,7 @@ export default function Home() {
               <div className="text-2xl mb-3">🔔</div>
               <h3 className="font-semibold text-slate-900">Property Alerts</h3>
               <p className="text-sm text-slate-500 mt-1">
-                Get instant, daily, or weekly alerts when new listings match your criteria.
+                Get alerts in your portal when new listings match your saved searches.
               </p>
             </div>
           </div>

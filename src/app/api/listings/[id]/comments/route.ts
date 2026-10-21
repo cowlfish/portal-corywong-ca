@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, jsonSuccess, jsonError } from "@/lib/api-helpers";
+import { notifyAgent } from "@/lib/notify";
 
 export async function GET(
   _request: NextRequest,
@@ -78,7 +79,7 @@ export async function POST(
   const { id } = await params;
   const listing = await prisma.mlsListing.findFirst({
     where: { OR: [{ id }, { mlsNumber: id }] },
-    select: { id: true },
+    select: { id: true, mlsNumber: true, streetNumber: true, streetName: true, city: true },
   });
   if (!listing) return jsonError("Listing not found", 404);
 
@@ -153,6 +154,27 @@ export async function POST(
       },
     },
   });
+
+  // Comments a client addresses to the agent ("AGENT" visibility) are questions for Cory
+  if (!isAgent && vis === "AGENT") {
+    const author = await prisma.user.findUnique({
+      where: { id: user.userId },
+      select: { email: true, firstName: true, lastName: true },
+    });
+    const address = [listing.streetNumber, listing.streetName].filter(Boolean).join(" ");
+    const name = author ? `${author.firstName} ${author.lastName}` : "A client";
+    notifyAgent({
+      subject: `${name} commented on ${address || `MLS® ${listing.mlsNumber}`}`,
+      fields: [
+        ["From", name],
+        ["Listing", `${address}, ${listing.city ?? ""} (MLS® ${listing.mlsNumber})`],
+        ["Comment", comment.body],
+      ],
+      actionPath: "/agent/comments",
+      actionLabel: "Open comments",
+      replyTo: author ? { email: author.email, name } : undefined,
+    });
+  }
 
   return jsonSuccess({ comment }, 201);
 }

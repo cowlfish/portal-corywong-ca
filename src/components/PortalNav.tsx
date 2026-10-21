@@ -74,7 +74,7 @@ export default function PortalNav() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
               <Link href="/dashboard" className="text-lg font-bold tracking-tight">
-                Cory Wong Real Estate
+                Cory Wong
               </Link>
             </div>
 

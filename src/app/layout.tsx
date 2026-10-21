@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cory Wong Real Estate — Client Portal",
+  title: "Client Portal | Cory Wong, Broker, Trustwell Realty Inc., Brokerage",
   description: "Search properties, manage transactions, and stay updated on your real estate journey.",
 };
 

@@ -1,0 +1,54 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "portal-corywong-ca",
+  "main": "worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "preview_urls": true,
+  "routes": [{ "pattern": "portal.corywong.ca", "custom_domain": true }],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    // Self-reference used by OpenNext's caching layer; must match "name"
+    { "binding": "WORKER_SELF_REFERENCE", "service": "portal-corywong-ca" }
+  ],
+  "r2_buckets": [
+    { "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "portal-corywong-ca-opennext-cache" },
+    // Encrypted transaction documents (replaces UPLOAD_DIR on disk)
+    { "binding": "DOCUMENTS", "bucket_name": "portal-corywong-ca-documents" }
+  ],
+  "hyperdrive": [
+    {
+      // Neon Postgres (config "portal-neon", direct non-pooler host). Caching is disabled:
+      // Hyperdrive doesn't invalidate cached reads on write, which would break approvals,
+      // sign-in and duplicate-request checks.
+      "binding": "HYPERDRIVE",
+      "id": "ffe525a0b4e34bcba9f5e55c941b138a",
+      "localConnectionString": "postgresql://postgres:postgres@localhost:5432/portal"
+    }
+  ],
+  "send_email": [
+    {
+      // Cloudflare Email Service. Onboard notify.corywong.ca under Email Service > Email Sending
+      // first (adds SPF/DKIM/DMARC on that subdomain only; corywong.ca mail stays on DreamHost).
+      "name": "EMAIL",
+      "allowed_sender_addresses": ["portal@notify.corywong.ca"],
+      "allowed_destination_addresses": ["cory@corywong.ca"]
+    }
+  ],
+  "triggers": {
+    // Replaces vercel.json crons (times are UTC). worker.ts maps each to its route.
+    // MLS delta sync every 15 min; alerts daily; removed-listing check daily at 07:30 UTC.
+    "crons": ["*/15 * * * *", "0 12 * * *", "30 7 * * *"]
+  },
+  "vars": {
+    "NEXT_PUBLIC_APP_NAME": "Cory Wong, Broker",
+    "NEXT_PUBLIC_APP_URL": "https://portal.corywong.ca",
+    // Where new sign-ups, tour requests and client comments are emailed
+    "NOTIFY_EMAIL": "cory@corywong.ca"
+  },
+  "observability": { "enabled": true }
+}

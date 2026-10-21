@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient, Prisma } from "../src/generated/prisma/client";
+import { PrismaClient, Prisma } from "../src/generated/prisma-node/client";
 import { AmpreResoProvider } from "../src/lib/mls/providers/ampre-reso";
 import type { MlsFeedListing, MlsFeedDelta } from "../src/lib/mls/types";
 

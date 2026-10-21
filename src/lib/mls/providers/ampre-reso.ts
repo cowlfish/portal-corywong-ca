@@ -10,6 +10,14 @@ import type {
 } from "../types";
 
 const BATCH_SIZE = 10_000;
+// AMPRE caps $top at 100 when $expand is used; 50 keeps each response ~1.5 MB, since
+// long responses are sometimes cut off mid-stream
+const DELTA_PAGE_SIZE = 50;
+const MAX_ATTEMPTS = 3;
+// Property records don't include photos unless Media is expanded. One size is enough.
+const PHOTO_FILTER = "MediaCategory eq 'Photo' and ImageSizeDescription eq 'Large'";
+const PHOTO_FIELDS = "MediaKey,MediaCategory,MediaURL,Order,ShortDescription,ImageWidth,ImageHeight,PreferredPhotoYN";
+const MEDIA_EXPAND = `Media($select=${PHOTO_FIELDS};$filter=${PHOTO_FILTER};$orderby=Order)`;
 
 export class AmpreResoProvider implements MlsFeedProvider {
   name = "ampre-reso";
@@ -49,7 +57,8 @@ export class AmpreResoProvider implements MlsFeedProvider {
     const url =
       `/Property?$filter=${encodeURIComponent(filter)}` +
       `&$orderby=${encodeURIComponent("ModificationTimestamp asc,ListingKey asc")}` +
-      `&$top=${BATCH_SIZE}`;
+      `&$expand=${encodeURIComponent(MEDIA_EXPAND)}` +
+      `&$top=${DELTA_PAGE_SIZE}`;
 
     const data = await this.request(url);
     const rows = (data.value ?? []) as Record<string, unknown>[];
@@ -68,8 +77,29 @@ export class AmpreResoProvider implements MlsFeedProvider {
       listings,
       deletedMlsNumbers: [],
       cursor: newCursor,
-      hasMore: rows.length === BATCH_SIZE,
+      hasMore: rows.length === DELTA_PAGE_SIZE,
     };
+  }
+
+  async fetchAllListingKeys(): Promise<Set<string>> {
+    const keys = new Set<string>();
+    let after: string | null = null;
+    for (;;) {
+      const filter: string = after ? `&$filter=${encodeURIComponent(`ListingKey gt '${after}'`)}` : "";
+      const data = await this.request(`/Property?$select=ListingKey&$orderby=ListingKey&$top=${BATCH_SIZE}${filter}`);
+      const rows = (data.value ?? []) as { ListingKey: string }[];
+      for (const r of rows) keys.add(r.ListingKey);
+      if (rows.length < BATCH_SIZE) return keys;
+      after = rows[rows.length - 1].ListingKey;
+    }
+  }
+
+  async fetchListingPhotos(listingKey: string): Promise<MlsFeedPhoto[]> {
+    const filter = `ResourceRecordKey eq '${listingKey.replace(/'/g, "''")}' and ${PHOTO_FILTER}`;
+    const data = await this.request(
+      `/Media?$filter=${encodeURIComponent(filter)}&$select=${PHOTO_FIELDS}&$orderby=Order&$top=100`
+    );
+    return this.mapPhotos(data.value as Record<string, unknown>[] | undefined);
   }
 
   async *fetchFullSync(batchSize = BATCH_SIZE): AsyncGenerator<MlsFeedDelta> {
@@ -112,31 +142,49 @@ export class AmpreResoProvider implements MlsFeedProvider {
 
   // ── HTTP ──────────────────────────────────────────────────────────
 
-  private async request(path: string): Promise<Record<string, unknown>> {
+  private async request(path: string, attempt = 1): Promise<Record<string, unknown>> {
     const url = path.startsWith("http")
       ? path
       : `${this.config.apiUrl}${path}`;
 
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${this.config.apiToken}`,
-        Accept: "application/json",
-      },
-    });
+    let res: Response;
+    let body: Record<string, unknown>;
+    try {
+      res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${this.config.apiToken}`,
+          Accept: "application/json",
+        },
+      });
 
-    if (res.status === 429) {
-      const retryAfter = res.headers.get("X-Rate-Limit-Retry-After-Seconds");
-      const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : 5000;
-      await new Promise((resolve) => setTimeout(resolve, waitMs));
-      return this.request(path);
+      if (res.status === 429) {
+        const retryAfter = res.headers.get("X-Rate-Limit-Retry-After-Seconds");
+        const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : 5000;
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+        return this.request(path, attempt);
+      }
+
+      if (!res.ok) {
+        throw Object.assign(new Error(`AMPRE API error: ${res.status} ${await res.text()}`), {
+          status: res.status,
+        });
+      }
+
+      body = (await res.json()) as Record<string, unknown>;
+    } catch (err) {
+      // AMPRE occasionally closes the connection mid-response on large pages, or returns a
+      // 5xx when its own database pool is busy. Retry those; 4xx (bad filter, auth) won't
+      // succeed on retry.
+      const status = (err as { status?: number }).status;
+      const retryable = status === undefined || status >= 500;
+      if (!retryable || attempt >= MAX_ATTEMPTS) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+      return this.request(path, attempt + 1);
     }
 
-    if (!res.ok) {
-      throw new Error(`AMPRE API error: ${res.status} ${await res.text()}`);
-    }
-
-    return res.json() as Promise<Record<string, unknown>>;
+    return body;
   }
+
 
   // ── Helpers ────────────────────────────────────────────────────────
 
@@ -159,10 +207,8 @@ export class AmpreResoProvider implements MlsFeedProvider {
         ? new Date(raw.StatusChangeTimestamp as string)
         : undefined,
       listPrice: Number(raw.ListPrice ?? 0),
-      soldPrice: raw.ClosePrice ? Number(raw.ClosePrice) : undefined,
-      originalPrice: raw.OriginalListPrice
-        ? Number(raw.OriginalListPrice)
-        : undefined,
+      soldPrice: this.dec(raw.ClosePrice, 10),
+      originalPrice: this.dec(raw.OriginalListPrice, 10),
       propertyType: this.str(raw.PropertyType),
       propertySubType: this.str(raw.PropertySubType),
       transactionType: this.str(raw.TransactionType),
@@ -181,8 +227,8 @@ export class AmpreResoProvider implements MlsFeedProvider {
       neighbourhood: this.str(raw.SubdivisionName),
       area: this.str(raw.MLSAreaMajor),
 
-      latitude: raw.Latitude ? Number(raw.Latitude) : undefined,
-      longitude: raw.Longitude ? Number(raw.Longitude) : undefined,
+      latitude: this.dec(raw.Latitude, 3),
+      longitude: this.dec(raw.Longitude, 3),
 
       bedrooms: raw.BedroomsTotal ? Number(raw.BedroomsTotal) : undefined,
       bedroomsPlus: raw.BedroomsAboveGrade
@@ -192,21 +238,19 @@ export class AmpreResoProvider implements MlsFeedProvider {
         ? Number(raw.BathroomsTotalInteger)
         : undefined,
       bathroomsHalf: raw.BathroomsHalf ? Number(raw.BathroomsHalf) : undefined,
-      sqft: raw.BuildingAreaTotal ? Number(raw.BuildingAreaTotal) : undefined,
+      sqft: this.dec(raw.BuildingAreaTotal, 8),
       sqftRangeMin: this.parseSqftRange(this.str(raw.LivingAreaRange))?.[0],
       sqftRangeMax: this.parseSqftRange(this.str(raw.LivingAreaRange))?.[1],
-      lotSizeSqft: raw.LotSizeArea ? Number(raw.LotSizeArea) : undefined,
-      lotFrontage: raw.LotWidth ? Number(raw.LotWidth) : undefined,
-      lotDepth: raw.LotDepth ? Number(raw.LotDepth) : undefined,
+      lotSizeSqft: this.dec(raw.LotSizeArea, 10),
+      lotFrontage: this.dec(raw.LotWidth, 6),
+      lotDepth: this.dec(raw.LotDepth, 6),
       yearBuilt: raw.YearBuilt ? Number(raw.YearBuilt) : undefined,
-      stories: raw.StoriesTotal ? Number(raw.StoriesTotal) : undefined,
+      stories: this.dec(raw.StoriesTotal, 3),
       parkingSpaces: raw.ParkingTotal ? Number(raw.ParkingTotal) : undefined,
       garageType: this.str(raw.GarageType),
       garageSpaces: raw.GarageSpaces ? Number(raw.GarageSpaces) : undefined,
 
-      maintenanceFee: raw.AssociationFee
-        ? Number(raw.AssociationFee)
-        : undefined,
+      maintenanceFee: this.dec(raw.AssociationFee, 8),
       condoExposure: this.str(raw.DirectionFaces),
       condoStyle: this.str(raw.ArchitecturalStyle),
       balcony: this.str(raw.Balcony),
@@ -225,11 +269,9 @@ export class AmpreResoProvider implements MlsFeedProvider {
       extrasRemarks: this.str(raw.Extras),
       featuresRemarks: this.str(raw.Features),
 
-      taxAmount: raw.TaxAnnualAmount ? Number(raw.TaxAnnualAmount) : undefined,
+      taxAmount: this.dec(raw.TaxAnnualAmount, 8),
       taxYear: raw.TaxYear ? Number(raw.TaxYear) : undefined,
-      assessedValue: raw.TaxAssessedValue
-        ? Number(raw.TaxAssessedValue)
-        : undefined,
+      assessedValue: this.dec(raw.TaxAssessedValue, 10),
 
       listAgentName: this.str(raw.ListAgentFullName),
       listAgentId: this.str(raw.ListAgentMlsId),
@@ -271,6 +313,16 @@ export class AmpreResoProvider implements MlsFeedProvider {
     return undefined;
   }
 
+  // A number that fits a Decimal column with this many integer digits, or undefined.
+  // Listing brokerages enter placeholder values (e.g. taxes of 888888888) that would
+  // otherwise overflow the column and fail the whole listing.
+  private dec(value: unknown, integerDigits: number): number | undefined {
+    if (value === null || value === undefined || value === "") return undefined;
+    const n = Number(value);
+    if (!Number.isFinite(n) || n === 0 || Math.abs(n) >= 10 ** integerDigits) return undefined;
+    return n;
+  }
+
   private mapStatus(status?: string): MlsFeedListing["status"] {
     const map: Record<string, MlsFeedListing["status"]> = {
       Active: "Active",
@@ -307,7 +359,7 @@ export class AmpreResoProvider implements MlsFeedProvider {
       roomType: r.RoomType as string | undefined,
       roomLevel: r.RoomLevel as string | undefined,
       roomDimensions: r.RoomDimensions as string | undefined,
-      roomArea: r.RoomArea ? Number(r.RoomArea) : undefined,
+      roomArea: this.dec(r.RoomArea, 8),
       roomDescription: r.RoomDescription as string | undefined,
     }));
   }

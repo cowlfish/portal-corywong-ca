@@ -132,5 +132,10 @@ export interface MlsFeedProvider {
   initialize(config: MlsFeedProviderConfig): Promise<void>;
   fetchDelta(cursor: ReplicationCursor | null): Promise<MlsFeedDelta>;
   fetchFullSync(batchSize?: number): AsyncGenerator<MlsFeedDelta>;
+  // Every listing key currently in the feed. IDX feeds drop listings when they sell or come
+  // off the market rather than sending a status change, so this is how removals are found.
+  fetchAllListingKeys(): Promise<Set<string>>;
+  // Full photo gallery for one listing, fetched live (the mirror stores only the cover photo)
+  fetchListingPhotos(listingKey: string): Promise<MlsFeedPhoto[]>;
   testConnection(): Promise<{ ok: boolean; message: string }>;
 }

@@ -42,6 +42,12 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+/src/generated/prisma-node
 
 # encrypted document uploads
 /uploads/
+
+# Cloudflare / OpenNext
+.open-next/
+.wrangler/
+.dev.vars

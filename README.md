@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# portal.corywong.ca
 
-## Getting Started
+Client portal for Cory Wong Real Estate: Next.js 16 + Prisma (Neon Postgres), running on
+Cloudflare Workers via [OpenNext](https://opennext.js.org/cloudflare).
 
-First, run the development server:
+## How it runs
+
+| Piece | Where |
+|---|---|
+| App | Worker `portal-corywong-ca` (`wrangler.jsonc`, entry `worker.ts`) |
+| Database | Neon Postgres through Hyperdrive binding `HYPERDRIVE` (`src/lib/db.ts`) |
+| Documents | R2 bucket `portal-corywong-ca-documents`, binding `DOCUMENTS` (`src/lib/encryption.ts`) |
+| Next cache | R2 bucket `portal-corywong-ca-opennext-cache` |
+| Cron | Cron Triggers in `wrangler.jsonc`; `worker.ts` maps each to its `/api/cron/*` route |
+| Email to Cory | Cloudflare Email Service, binding `EMAIL`, from `portal@notify.corywong.ca` (`src/lib/notify.ts`) |
+
+## MLS sync
+
+The TRREB IDX feed (AMPRE) is mirrored into Postgres by `src/lib/mls/sync/engine.ts`:
+
+- **Every 15 minutes** (`/api/cron/mls-sync`): changes since the last cursor, 50 listings per page with the
+  cover photo, at most 20 pages (1,000 listings) per run. The cursor is saved after each page, so a run that's
+  cut off resumes where it stopped; a run that finds another still running skips.
+- **Daily** (`/api/cron/mls-reconcile`): listings no longer in the feed (sold, expired, withdrawn) are marked
+  `DELETED`. The IDX feed drops them rather than sending a status change.
+- **Photos**: only the cover photo is stored (all ~40 per listing would be several GB). Listing pages fetch the
+  full gallery from the feed live.
+- **Catching up a large backlog** (more than a few thousand changes): run it from your machine instead of
+  waiting for the cron to work through it at 1,000 per 15 minutes:
+
+  ```bash
+  PORTAL_DATABASE_URL=... AMPRE_API_TOKEN=... npx tsx scripts/catch-up-sync.ts
+  ```
+
+Prisma generates two clients from `prisma/schema.prisma`: `src/generated/prisma` for Workers (used by the app)
+and `src/generated/prisma-node` for Node scripts. Scripts that reuse app code pass the Node client to
+`setPrismaClient()` in `src/lib/db.ts`.
+
+## RECO compliance
+
+See [docs/RECO-COMPLIANCE.md](docs/RECO-COMPLIANCE.md). `npm run build` runs `npm run check:reco` first.
+
+## Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .dev.vars.example .dev.vars   # fill in secrets
+npm run dev                      # next dev, with Cloudflare bindings
+npm run preview                  # build and run the real Worker locally
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+For a database locally, set `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` (or edit
+`localConnectionString` in `wrangler.jsonc`). Prisma CLI and scripts still read `PORTAL_DATABASE_URL`
+from `.env`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+After changing `wrangler.jsonc`, run `npm run cf-typegen`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploy
 
-## Learn More
+```bash
+npm run deploy
+```
 
-To learn more about Next.js, take a look at the following resources:
+Secrets are set once per name with `npx wrangler secret put <NAME>` (see `.dev.vars.example`).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Before the first deploy, onboard `notify.corywong.ca` under **Compute > Email Service > Email Sending** in the
+Cloudflare dashboard. It adds SPF, DKIM and DMARC records to that subdomain only; `corywong.ca` mail stays on
+DreamHost. Until then, notifications are logged instead of sent. Email Sending needs the Workers Paid plan.
+`NEXT_PUBLIC_*` values are inlined at build time, so they must be in the build environment too.

@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import PhotoCarousel from "@/components/listings/PhotoCarousel";
 import IdxDisclaimer from "@/components/listings/IdxDisclaimer";
 import CommentThread from "@/components/listings/CommentThread";
+import TourRequestForm from "@/components/listings/TourRequestForm";
 
 const ListingMap = dynamic(() => import("@/components/listings/ListingMap"), {
   ssr: false,
@@ -390,18 +391,7 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
 
         <div className="space-y-6">
           <div className="bg-white border border-slate-200 rounded-lg p-6 sticky top-6 space-y-4">
-            <button
-              onClick={() => {
-                const mailto = `mailto:cory@corywong.ca?subject=${encodeURIComponent(`Tour Request — MLS® ${l.mlsNumber}`)}&body=${encodeURIComponent(`Hi Cory,\n\nI'd like to schedule a tour for the property at ${address}, ${l.city || ""}.\n\nPlease let me know available times.\n\nThank you!`)}`;
-                window.location.href = mailto;
-              }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Request a Tour
-            </button>
+            <TourRequestForm listingId={l.id} address={`${address}, ${l.city || ""}`.replace(/, $/, "")} />
 
             <SaveToListButton mlsNumber={l.mlsNumber} />
 

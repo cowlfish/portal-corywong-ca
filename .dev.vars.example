@@ -1,0 +1,11 @@
+# Copy to .dev.vars for `npm run preview` / `next dev` (secrets; never commit .dev.vars)
+# In production set each with: npx wrangler secret put <NAME>
+AMPRE_API_TOKEN=
+AMPRE_API_URL="https://query.ampre.ca/odata"
+MLS_SYNC_SECRET=
+CRON_SECRET=
+JWT_SECRET=
+DOCUMENT_ENCRYPTION_KEY=
+NEXT_PUBLIC_FEATURE_MESSAGING=false
+NEXT_PUBLIC_FEATURE_TRANSACTIONS=false
+NEXT_PUBLIC_AMPRE_FEED_LIVE=false

@@ -56,7 +56,7 @@ export default function Home() {
             <Link href="/listings?city=Brampton" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">
               Brampton
             </Link>
-            <Link href="/listings?propertyType=Condo+Apt" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">
+            <Link href="/listings?propertyType=Condo+Apartment" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">
               Condos
             </Link>
             <Link href="/listings?propertyType=Detached" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">

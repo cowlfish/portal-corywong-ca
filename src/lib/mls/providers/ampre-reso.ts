@@ -143,7 +143,8 @@ export class AmpreResoProvider implements MlsFeedProvider {
   private str(val: unknown): string | undefined {
     if (val == null) return undefined;
     if (Array.isArray(val)) return val.length > 0 ? val.join(", ") : undefined;
-    return String(val);
+    // Some feed values carry stray whitespace ("Semi-Detached ")
+    return String(val).trim() || undefined;
   }
 
   // ── Mapping (RESO Data Dictionary → internal types) ───────────────

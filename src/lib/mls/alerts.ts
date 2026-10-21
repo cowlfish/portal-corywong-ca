@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
+import { propertyTypeWhere } from "./property-types";
 
 interface SearchCriteria {
   city?: string;
@@ -44,7 +45,7 @@ export async function generateAlerts(): Promise<AlertGenerationResult> {
         where.city = { equals: criteria.city, mode: "insensitive" };
       }
       if (criteria.propertyType) {
-        where.propertyType = { equals: criteria.propertyType, mode: "insensitive" };
+        where.AND = [propertyTypeWhere(criteria.propertyType)];
       }
       if (criteria.minPrice != null) {
         where.listPrice = { ...(where.listPrice as object), gte: criteria.minPrice };

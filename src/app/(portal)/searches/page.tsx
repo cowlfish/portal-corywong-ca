@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
+import { PROPERTY_TYPES, propertyTypeLabel } from "@/lib/mls/property-types";
 
 interface SavedSearch {
   id: string;
@@ -12,17 +13,6 @@ interface SavedSearch {
   updatedAt: string;
 }
 
-const PROPERTY_TYPES = [
-  "Detached",
-  "Semi-Detached",
-  "Townhouse",
-  "Condo Apartment",
-  "Condo Townhouse",
-  "Duplex",
-  "Triplex",
-  "Multiplex",
-  "Vacant Land",
-];
 
 export default function SearchesPage() {
   const [searches, setSearches] = useState<SavedSearch[]>([]);
@@ -83,7 +73,7 @@ export default function SearchesPage() {
   function formatCriteria(criteria: Record<string, unknown>): string {
     const parts: string[] = [];
     if (criteria.city) parts.push(String(criteria.city));
-    if (criteria.propertyType) parts.push(String(criteria.propertyType));
+    if (criteria.propertyType) parts.push(propertyTypeLabel(String(criteria.propertyType)));
     if (criteria.minPrice || criteria.maxPrice) {
       const min = criteria.minPrice ? `$${Number(criteria.minPrice).toLocaleString()}` : "$0";
       const max = criteria.maxPrice ? `$${Number(criteria.maxPrice).toLocaleString()}` : "Any";
@@ -159,7 +149,7 @@ export default function SearchesPage() {
                 >
                   <option value="">Any</option>
                   {PROPERTY_TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
+                    <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>
               </div>

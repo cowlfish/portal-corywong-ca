@@ -78,9 +78,9 @@ export default function PropertyCard({ listing }: { listing: PropertyCardListing
           </div>
         )}
         <div className="absolute top-2 left-2">
-          {listing.propertyType && (
+          {(listing.propertySubType || listing.propertyType) && (
             <span className="inline-block bg-slate-900/80 text-white text-xs px-2 py-0.5 rounded">
-              {listing.propertyType}
+              {listing.propertySubType?.trim() || listing.propertyType}
             </span>
           )}
         </div>

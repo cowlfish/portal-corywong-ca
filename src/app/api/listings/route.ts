@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { propertyTypeWhere } from "@/lib/mls/property-types";
 
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
@@ -36,7 +37,8 @@ export async function GET(request: NextRequest) {
   }
 
   const propertyType = sp.get("propertyType");
-  if (propertyType) where.propertyType = propertyType;
+  const and: unknown[] = [];
+  if (propertyType) and.push(propertyTypeWhere(propertyType));
 
   const city = sp.get("city");
   if (city) where.city = { contains: city, mode: "insensitive" };
@@ -52,15 +54,16 @@ export async function GET(request: NextRequest) {
 
   const q = sp.get("q");
   if (q) {
-    where.OR = [
+    and.push({ OR: [
       { streetName: { contains: q, mode: "insensitive" } },
       { city: { contains: q, mode: "insensitive" } },
       { neighbourhood: { contains: q, mode: "insensitive" } },
       { community: { contains: q, mode: "insensitive" } },
       { mlsNumber: { contains: q, mode: "insensitive" } },
       { publicRemarks: { contains: q, mode: "insensitive" } },
-    ];
+    ] });
   }
+  if (and.length) where.AND = and;
 
   const openHouses = sp.get("openHouses");
   if (openHouses === "true") {

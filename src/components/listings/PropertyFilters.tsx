@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { PROPERTY_TYPES, propertyTypeLabel } from "@/lib/mls/property-types";
 
 export interface FilterValues {
   q: string;
@@ -32,17 +33,6 @@ const INITIAL_FILTERS: FilterValues = {
   openHouses: "",
 };
 
-const PROPERTY_TYPES = [
-  "Detached",
-  "Semi-Detached",
-  "Condo Apt",
-  "Condo Townhouse",
-  "Att/Row/Twnhouse",
-  "Comm Element Condo",
-  "Link",
-  "Multiplex",
-  "Vacant Land",
-];
 
 const SORT_OPTIONS = [
   { value: "listDate", label: "Newest" },
@@ -181,7 +171,7 @@ export default function PropertyFilters({ filters, onApply, total }: Props) {
           </button>
         ))}
         <span className="border-l border-slate-200 mx-1" />
-        {["Detached", "Condo Apt", "Semi-Detached", "Att/Row/Twnhouse"].map((t) => (
+        {["Detached", "Condo Apartment", "Semi-Detached", "Att/Row/Townhouse"].map((t) => (
           <button
             key={t}
             type="button"
@@ -192,7 +182,7 @@ export default function PropertyFilters({ filters, onApply, total }: Props) {
                 : "bg-white text-slate-600 border-slate-300 hover:border-slate-400"
             }`}
           >
-            {t}
+            {propertyTypeLabel(t)}
           </button>
         ))}
         <span className="border-l border-slate-200 mx-1" />
@@ -266,7 +256,7 @@ export default function PropertyFilters({ filters, onApply, total }: Props) {
             >
               <option value="">All Types</option>
               {PROPERTY_TYPES.map((t) => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
           </div>

@@ -59,7 +59,7 @@ export default function PendingApprovalPage() {
             <Link href="/listings" className="text-slate-900 underline">
               Search listings
             </Link>{" "}
-            and request a tour from any listing page.
+            and request a showing from any listing page.
           </li>
           <li>
             Reach Cory directly:{" "}

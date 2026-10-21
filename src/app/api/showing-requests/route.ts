@@ -40,13 +40,13 @@ export async function POST(request: NextRequest) {
   if (!listing) return jsonError("This listing is no longer available", 404);
 
   // Same person, same listing, within 10 minutes: treat as a double submit
-  const recent = await prisma.tourRequest.findFirst({
+  const recent = await prisma.showingRequest.findFirst({
     where: { email, listingId: listing.id, createdAt: { gt: new Date(Date.now() - 10 * 60 * 1000) } },
     select: { id: true },
   });
   if (recent) return jsonSuccess({ ok: true, id: recent.id }, 200);
 
-  const tourRequest = await prisma.tourRequest.create({
+  const showingRequest = await prisma.showingRequest.create({
     data: {
       listingId: listing.id,
       userId: session?.userId ?? null,
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     Number(listing.listPrice)
   );
   notifyAgent({
-    subject: `Tour request: ${address}, ${listing.city ?? ""} from ${name}`,
+    subject: `Showing request: ${address}, ${listing.city ?? ""} from ${name}`,
     fields: [
       ["Name", name],
       ["Email", email],
@@ -76,9 +76,9 @@ export async function POST(request: NextRequest) {
       ["Message", message],
     ],
     actionPath: "/agent/requests",
-    actionLabel: "Open tour requests",
+    actionLabel: "Open showing requests",
     replyTo: { email, name },
   });
 
-  return jsonSuccess({ ok: true, id: tourRequest.id }, 201);
+  return jsonSuccess({ ok: true, id: showingRequest.id }, 201);
 }

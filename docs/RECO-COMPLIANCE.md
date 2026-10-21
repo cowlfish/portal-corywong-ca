@@ -74,7 +74,7 @@ Status of the `cloudflare-port` branch.
    `generateAlerts` ignores the setting and runs once a day, and nothing sends email. Either build it or
    remove the options. The check warns on "Instant" until then.
 2. **Privacy policy and terms: drafted, need review.** `/privacy` and `/terms` now exist (2026-10-20) and describe
-   what the portal actually collects, including tour requests. Have the brokerage review both before launch.
+   what the portal actually collects, including showing requests. Have the brokerage review both before launch.
 3. **REALTOR® / CREA membership.** The TRREB feed implies TRREB (and so CREA) membership. If Cory is a
    member in good standing, set `REALTOR_MEMBER = true` in the check; if not, the CREA legend should go too.
 4. **Listing brokerage contact details.** Listing pages name the listing office but don't give its

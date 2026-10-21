@@ -7,7 +7,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import PhotoCarousel from "@/components/listings/PhotoCarousel";
 import IdxDisclaimer from "@/components/listings/IdxDisclaimer";
 import CommentThread from "@/components/listings/CommentThread";
-import TourRequestForm from "@/components/listings/TourRequestForm";
+import ShowingRequestForm from "@/components/listings/ShowingRequestForm";
 
 const ListingMap = dynamic(() => import("@/components/listings/ListingMap"), {
   ssr: false,
@@ -391,7 +391,7 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
 
         <div className="space-y-6">
           <div className="bg-white border border-slate-200 rounded-lg p-6 sticky top-6 space-y-4">
-            <TourRequestForm listingId={l.id} address={`${address}, ${l.city || ""}`.replace(/, $/, "")} />
+            <ShowingRequestForm listingId={l.id} address={`${address}, ${l.city || ""}`.replace(/, $/, "")} />
 
             <SaveToListButton mlsNumber={l.mlsNumber} />
 

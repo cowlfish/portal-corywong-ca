@@ -541,7 +541,7 @@ export async function pruneRemovedListings(olderThanDays = PRUNE_AFTER_DAYS): Pr
         tourStops: { none: {} },
         cmaComps: { none: {} },
         comments: { none: {} },
-        tourRequests: { none: {} },
+        showingRequests: { none: {} },
       },
       select: { id: true },
       take: 500,

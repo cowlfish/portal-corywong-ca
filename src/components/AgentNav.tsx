@@ -8,7 +8,7 @@ const NAV_ITEMS = [
   { href: "/agent/dashboard", label: "Dashboard" },
   { href: "/agent/clients", label: "Clients" },
   { href: "/agent/approvals", label: "Approvals" },
-  { href: "/agent/requests", label: "Tour Requests" },
+  { href: "/agent/requests", label: "Showing Requests" },
   { href: "/agent/groups", label: "Groups" },
   { href: "/agent/comments", label: "Comments" },
   { href: "/agent/invites", label: "Invites" },

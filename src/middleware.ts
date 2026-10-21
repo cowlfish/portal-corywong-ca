@@ -17,7 +17,7 @@ function isPublicPath(pathname: string): boolean {
   if (pathname.startsWith("/tours/share/")) return true;
   if (pathname.startsWith("/api/tours/share/")) return true;
   if (pathname.startsWith("/api/feature-flags")) return true;
-  if (pathname === "/api/tour-requests") return true;
+  if (pathname === "/api/showing-requests") return true;
   // Cron and manual sync endpoints authenticate with their own bearer secrets, not a session
   if (pathname.startsWith("/api/cron/") || pathname === "/api/mls/sync") return true;
   if (pathname.startsWith("/register-invite/")) return true;

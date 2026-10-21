@@ -11,7 +11,7 @@ interface Props {
 const inputClass =
   "w-full px-3 py-2 border border-slate-300 rounded-md text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent";
 
-export default function TourRequestForm({ listingId, address }: Props) {
+export default function ShowingRequestForm({ listingId, address }: Props) {
   const [open, setOpen] = useState(false);
   const [prefill, setPrefill] = useState<{ name: string; email: string; phone: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -40,7 +40,7 @@ export default function TourRequestForm({ listingId, address }: Props) {
     setError(null);
     const form = new FormData(e.currentTarget);
     try {
-      const res = await fetch("/api/tour-requests", {
+      const res = await fetch("/api/showing-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -86,7 +86,7 @@ export default function TourRequestForm({ listingId, address }: Props) {
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
-        Request a Tour
+        Request a Showing
       </button>
     );
   }
@@ -95,7 +95,7 @@ export default function TourRequestForm({ listingId, address }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <h3 className="text-sm font-medium text-slate-900">Request a tour</h3>
+      <h3 className="text-sm font-medium text-slate-900">Request a showing</h3>
       <input name="name" required defaultValue={prefill.name} placeholder="Your name *" className={inputClass} />
       <input name="email" type="email" required defaultValue={prefill.email} placeholder="Email *" className={inputClass} />
       <input name="phone" type="tel" defaultValue={prefill.phone} placeholder="Phone" className={inputClass} />

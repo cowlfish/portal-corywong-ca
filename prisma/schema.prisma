@@ -120,16 +120,16 @@ model MlsListing {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  photos         MlsListingPhoto[]
-  rooms          MlsPropertyRoom[]
-  openHouses     MlsOpenHouse[]
-  priceHistory   MlsPriceHistory[]
-  favorites      Favorite[]
-  propertyAlerts PropertyAlert[]
-  tourStops      TourStop[]
-  cmaComps       CmaComp[]
-  comments       ListingComment[]
-  tourRequests   TourRequest[]
+  photos          MlsListingPhoto[]
+  rooms           MlsPropertyRoom[]
+  openHouses      MlsOpenHouse[]
+  priceHistory    MlsPriceHistory[]
+  favorites       Favorite[]
+  propertyAlerts  PropertyAlert[]
+  tourStops       TourStop[]
+  cmaComps        CmaComp[]
+  comments        ListingComment[]
+  showingRequests ShowingRequest[]
 
   @@index([status])
   @@index([city, status])
@@ -326,7 +326,7 @@ model User {
   tours            Tour[]
   groupMemberships ClientGroupMember[]
   listingComments  ListingComment[]
-  tourRequests     TourRequest[]
+  showingRequests  ShowingRequest[]
   invite           Invite?             @relation(fields: [inviteId], references: [id], onDelete: SetNull)
 
   @@index([email])
@@ -958,28 +958,30 @@ model SiteSetting {
   @@map("site_settings")
 }
 
-// ─── Tour Requests ─────────────────────────────────────────────────
-// "Request a Tour" on a listing page. Open to visitors who aren't signed in, so contact
+// ─── Showing Requests ─────────────────────────────────────────────────
+// "Request a Showing" on a listing page. Open to visitors who aren't signed in, so contact
 // details are stored on the request; userId is set when a signed-in client sends it.
 
-enum TourRequestStatus {
+enum ShowingRequestStatus {
   NEW
   CONTACTED
   BOOKED
   CLOSED
+
+  @@map("TourRequestStatus")
 }
 
-model TourRequest {
-  id             String            @id @default(cuid())
-  listingId      String            @map("listing_id")
-  userId         String?           @map("user_id")
+model ShowingRequest {
+  id             String               @id @default(cuid())
+  listingId      String               @map("listing_id")
+  userId         String?              @map("user_id")
   name           String
   email          String
   phone          String?
-  preferredTimes String            @map("preferred_times") @db.Text
-  message        String?           @db.Text
-  status         TourRequestStatus @default(NEW)
-  agentNotes     String?           @map("agent_notes") @db.Text
+  preferredTimes String               @map("preferred_times") @db.Text
+  message        String?              @db.Text
+  status         ShowingRequestStatus @default(NEW)
+  agentNotes     String?              @map("agent_notes") @db.Text
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

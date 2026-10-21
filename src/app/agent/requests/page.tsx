@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 type Status = "NEW" | "CONTACTED" | "BOOKED" | "CLOSED";
 
-interface TourRequest {
+interface ShowingRequest {
   id: string;
   name: string;
   email: string;
@@ -48,18 +48,18 @@ function formatPrice(p: string | number) {
   return new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(Number(p));
 }
 
-function address(l: TourRequest["listing"]) {
+function address(l: ShowingRequest["listing"]) {
   return [l.unitNumber && `${l.unitNumber} -`, l.streetNumber, l.streetName].filter(Boolean).join(" ");
 }
 
-export default function AgentTourRequestsPage() {
-  const [requests, setRequests] = useState<TourRequest[]>([]);
+export default function AgentShowingRequestsPage() {
+  const [requests, setRequests] = useState<ShowingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<(typeof TABS)[number]["value"]>("OPEN");
   const [saving, setSaving] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/agent/tour-requests")
+    fetch("/api/agent/showing-requests")
       .then((r) => r.json())
       .then((d) => setRequests(d.requests ?? []))
       .catch(() => {})
@@ -69,7 +69,7 @@ export default function AgentTourRequestsPage() {
   async function update(id: string, data: { status?: Status; agentNotes?: string }) {
     setSaving(id);
     try {
-      const res = await fetch("/api/agent/tour-requests", {
+      const res = await fetch("/api/agent/showing-requests", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, ...data }),
@@ -91,7 +91,7 @@ export default function AgentTourRequestsPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">Tour Requests</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Showing Requests</h1>
         <p className="text-slate-500 mt-1">
           Showing requests from listing pages{newCount > 0 && ` · ${newCount} new`}
         </p>
@@ -115,7 +115,7 @@ export default function AgentTourRequestsPage() {
         <div className="text-slate-400">Loading requests...</div>
       ) : visible.length === 0 ? (
         <div className="bg-white rounded-lg border border-slate-200 p-12 text-center">
-          <div className="text-slate-400 text-lg">No tour requests here</div>
+          <div className="text-slate-400 text-lg">No showing requests here</div>
           <p className="text-slate-400 text-sm mt-1">Requests from listing pages appear here and are emailed to you</p>
         </div>
       ) : (

@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, jsonSuccess, jsonError } from "@/lib/api-helpers";
-import { TourRequestStatus } from "@/generated/prisma/client";
+import { ShowingRequestStatus } from "@/generated/prisma/client";
 
-const STATUSES = Object.values(TourRequestStatus);
+const STATUSES = Object.values(ShowingRequestStatus);
 
 export async function GET(req: NextRequest) {
   const { user, error } = await requireAuth();
@@ -13,8 +13,8 @@ export async function GET(req: NextRequest) {
   }
 
   const status = req.nextUrl.searchParams.get("status");
-  const requests = await prisma.tourRequest.findMany({
-    where: status && STATUSES.includes(status as TourRequestStatus) ? { status: status as TourRequestStatus } : {},
+  const requests = await prisma.showingRequest.findMany({
+    where: status && STATUSES.includes(status as ShowingRequestStatus) ? { status: status as ShowingRequestStatus } : {},
     include: {
       listing: {
         select: {
@@ -50,7 +50,7 @@ export async function PATCH(req: NextRequest) {
     return jsonError(`status must be one of: ${STATUSES.join(", ")}`, 400);
   }
 
-  const updated = await prisma.tourRequest.update({
+  const updated = await prisma.showingRequest.update({
     where: { id },
     data: {
       ...(status !== undefined && { status }),

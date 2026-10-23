@@ -114,7 +114,7 @@ for (const [file, source] of sources) {
 // <title> text doesn't count: it isn't shown on the page.
 const identifies = s => {
   const body = s.replace(/^\s*title:.*$/gm, '');
-  return body.includes('ComplianceFooter') || body.includes(BROKERAGE) || body.includes('BrokerageBar');
+  return body.includes('ComplianceFooter') || body.includes(BROKERAGE) || body.includes('BrandMark');
 };
 let pages = 0;
 for (const [file, source] of sources) {

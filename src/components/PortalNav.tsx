@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import BrandMark from "@/components/BrandMark";
 
 interface FeatureFlags {
   messagingEnabled: boolean;
@@ -72,9 +73,7 @@ export default function PortalNav() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
-              <Link href="/dashboard" className="text-lg font-bold tracking-tight">
-                Cory Wong
-              </Link>
+              <BrandMark href="/dashboard" />
             </div>
 
             <div className="hidden md:flex items-center gap-1">

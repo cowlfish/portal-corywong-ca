@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import PropertyCard, { type PropertyCardListing } from "@/components/listings/PropertyCard";
 import PropertyFilters, { type FilterValues, INITIAL_FILTERS } from "@/components/listings/PropertyFilters";
-import IdxDisclaimer from "@/components/listings/IdxDisclaimer";
 
 const ListingMap = dynamic(() => import("@/components/listings/ListingMap"), {
   ssr: false,
@@ -291,8 +290,6 @@ function ListingsContent() {
           </button>
         </div>
       )}
-
-      <IdxDisclaimer className="mt-8" />
     </div>
   );
 }

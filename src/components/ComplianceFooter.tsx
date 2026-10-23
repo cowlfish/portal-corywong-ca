@@ -1,3 +1,5 @@
+// The site's one copy of the brokerage identification, RECO statement and the CREA/TRREB
+// notices for MLS® listing data. Don't repeat these on individual pages.
 export default function ComplianceFooter({ className = "" }: { className?: string }) {
   return (
     <footer
@@ -5,11 +7,9 @@ export default function ComplianceFooter({ className = "" }: { className?: strin
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-3">
         <div>
-          <span className="text-slate-300 font-medium">Cory Wong</span>, Broker
-        </div>
-        <div>
-          Trustwell Realty Inc., Brokerage | 3640 Victoria Park Ave., Suite 300,
-          Toronto, ON M2H 3B2 | (416) 498-9995
+          <span className="text-slate-300 font-medium">Cory Wong</span>, Broker | Trustwell
+          Realty Inc., Brokerage | 3640 Victoria Park Ave., Suite 300, Toronto, ON M2H 3B2 |
+          (416) 498-9995
         </div>
         <div className="border-t border-slate-700 pt-3">
           This brokerage and its registrants are registered with the Real
@@ -35,17 +35,19 @@ export default function ComplianceFooter({ className = "" }: { className?: strin
           identify real estate professionals who are members of CREA.
         </div>
         <div className="text-slate-500">
-          The listing data is provided under copyright by the Toronto Regional
-          Real Estate Board (TRREB). The information is deemed reliable but is
-          not guaranteed.
+          Listing data is provided under the MLS&reg; Reciprocity program of the
+          Toronto Regional Real Estate Board (TRREB) and is deemed reliable but
+          not guaranteed. IDX information is provided for consumers&apos; personal,
+          non-commercial use only and may not be used for any purpose other than to
+          identify properties consumers may be interested in purchasing. Listing
+          data is copyright&nbsp;&copy; TRREB. All rights reserved.
         </div>
         <div className="border-t border-slate-700 pt-3 text-slate-500">
           <a href="/privacy" className="underline hover:text-white">Privacy Policy</a>
           {" · "}
           <a href="/terms" className="underline hover:text-white">Terms of Use</a>
           {" · "}
-          &copy; {new Date().getFullYear()} Trustwell Realty Inc., Brokerage. All
-          rights reserved.
+          &copy; {new Date().getFullYear()}. All rights reserved.
         </div>
       </div>
     </footer>

@@ -5,7 +5,6 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import PhotoCarousel from "@/components/listings/PhotoCarousel";
-import IdxDisclaimer from "@/components/listings/IdxDisclaimer";
 import CommentThread from "@/components/listings/CommentThread";
 import ShowingRequestForm from "@/components/listings/ShowingRequestForm";
 import { daysOnMarket } from "@/lib/mls/days-on-market";
@@ -486,8 +485,6 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
           </div>
         </div>
       </div>
-
-      <IdxDisclaimer className="mt-8" />
     </div>
   );
 }

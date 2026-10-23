@@ -1,14 +1,14 @@
 import Link from "next/link";
 import ComplianceFooter from "@/components/ComplianceFooter";
 import SearchBar from "@/components/listings/SearchBar";
-import BrokerageBar from "@/components/BrokerageBar";
+import BrandMark from "@/components/BrandMark";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-slate-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <span className="text-lg font-bold tracking-tight">Cory Wong</span>
+          <BrandMark />
           <div className="flex items-center gap-3">
             <Link
               href="/listings"
@@ -31,7 +31,6 @@ export default function Home() {
           </div>
         </div>
       </header>
-      <BrokerageBar />
 
       <main className="flex-1 flex justify-center px-4 py-12 sm:py-20">
         <div className="max-w-2xl w-full text-center">

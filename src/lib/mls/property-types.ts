@@ -9,6 +9,8 @@ export const PROPERTY_TYPES = [
   { value: "Condo Apartment", label: "Condo Apartment", subTypes: ["Condo Apartment"] },
   { value: "Condo Townhouse", label: "Condo Townhouse", subTypes: ["Condo Townhouse"] },
   { value: "Att/Row/Townhouse", label: "Freehold Townhouse", subTypes: ["Att/Row/Townhouse"] },
+  // Plural on purpose: the "townhouse" alias below keeps meaning freehold for old links
+  { value: "Townhouses", label: "Townhouses (Freehold & Condo)", subTypes: ["Att/Row/Townhouse", "Condo Townhouse"] },
   { value: "Common Element Condo", label: "Common Element Condo", subTypes: ["Common Element Condo"] },
   { value: "Link", label: "Link", subTypes: ["Link"] },
   { value: "Multiplex", label: "Multiplex (2–4 units)", subTypes: ["Multiplex", "Duplex", "Triplex", "Fourplex"] },

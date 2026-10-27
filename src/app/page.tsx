@@ -54,14 +54,23 @@ export default function Home() {
             <Link href="/listings?city=Mississauga" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">
               Mississauga
             </Link>
-            <Link href="/listings?city=Brampton" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">
-              Brampton
+            <Link href="/listings?city=Markham" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">
+              Markham
+            </Link>
+            <Link href="/listings?city=Richmond+Hill" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">
+              Richmond Hill
             </Link>
             <Link href="/listings?propertyType=Condo+Apartment" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">
               Condos
             </Link>
             <Link href="/listings?propertyType=Detached" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">
               Detached
+            </Link>
+            <Link href="/listings?propertyType=Semi-Detached" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">
+              Semi-Detached
+            </Link>
+            <Link href="/listings?propertyType=Townhouses" className="px-3 py-1 bg-white border border-slate-200 rounded-full hover:border-slate-400 transition-colors text-slate-600">
+              Townhomes
             </Link>
           </div>
 

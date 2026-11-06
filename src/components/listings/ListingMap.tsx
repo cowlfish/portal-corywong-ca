@@ -23,7 +23,7 @@ interface Props {
   // not on every update: results reload as the map moves, and refitting would loop.
   fitKey?: string;
   zoom?: number;
-  // Label over the map's top-left corner; null for none (the listing page has its own note)
+  // Label over the map's bottom-left corner; null for none (the listing page has its own note)
   note?: ReactNode;
 }
 
@@ -53,6 +53,9 @@ function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
+// Listings behind each pin, for cluster counts
+const listingCounts = new WeakMap<google.maps.marker.AdvancedMarkerElement, number>();
+
 // One script load per page, shared by every map on it
 let scriptLoad: Promise<void> | null = null;
 function loadGoogleMaps(): Promise<void> {
@@ -72,10 +75,62 @@ function loadGoogleMaps(): Promise<void> {
   return scriptLoad;
 }
 
-function pin(): HTMLElement {
+// A pin for one listing, or with a count for several at the same spot (condo units share their
+// building's address, so they geocode to the same point and would never split apart)
+function pin(count = 1): HTMLElement {
   const el = document.createElement("div");
-  el.className = "listing-pin";
+  el.className = count > 1 ? "listing-pin listing-pin-group" : "listing-pin";
+  if (count > 1) el.textContent = String(count);
   return el;
+}
+
+function clusterIcon(count: number): HTMLElement {
+  const el = document.createElement("div");
+  el.className = "listing-cluster";
+  el.textContent = count.toLocaleString("en-CA");
+  return el;
+}
+
+function priceLabel(l: MapListing): string {
+  return `${formatPrice(l.listPrice)}${l.transactionType?.includes("Lease") ? "/mo" : ""}`;
+}
+
+function bedBath(l: MapListing): string {
+  return l.bedrooms ? `${l.bedrooms} bed / ${l.bathrooms || 0} bath` : "";
+}
+
+function popupHtml(group: MapListing[]): string {
+  const link = (l: MapListing) => `/listings/${encodeURIComponent(l.mlsNumber)}`;
+  if (group.length === 1) {
+    const l = group[0];
+    return `<div class="text-sm">
+      <div class="font-bold">${priceLabel(l)}</div>
+      <div>${escapeHtml(streetAddress(l, { unit: false }) || "Address unavailable")}</div>
+      <div class="text-slate-500">${escapeHtml(l.city || "")}</div>
+      ${bedBath(l) ? `<div>${bedBath(l)}</div>` : ""}
+      <a href="${link(l)}" class="text-blue-600 text-xs">View details</a>
+    </div>`;
+  }
+  // Several listings at one spot: usually units in one building, sometimes neighbours that
+  // only have a postal code location
+  const addresses = new Set(group.map((l) => streetAddress(l, { unit: false })));
+  const shared = addresses.size === 1 ? [...addresses][0] : null;
+  const rows = [...group]
+    .sort((a, b) => Number(a.listPrice) - Number(b.listPrice))
+    .map((l) => {
+      const label = shared ? (l.unitNumber ? `Unit ${l.unitNumber}` : "") : streetAddress(l) || "";
+      const details = [label, bedBath(l)].filter(Boolean).map(escapeHtml).join(" · ");
+      return `<a href="${link(l)}" class="block py-1.5 border-t border-slate-100 hover:bg-slate-50">
+        <span class="font-semibold text-slate-900">${priceLabel(l)}</span>
+        ${details ? `<span class="text-slate-600"> · ${details}</span>` : ""}
+      </a>`;
+    })
+    .join("");
+  return `<div class="text-sm min-w-[220px]">
+    <div class="font-bold pb-1">${group.length} listings ${shared ? `at ${escapeHtml(shared)}` : "here"}</div>
+    ${shared && group[0].city ? `<div class="text-slate-500 pb-1">${escapeHtml(group[0].city)}</div>` : ""}
+    <div class="max-h-48 overflow-y-auto">${rows}</div>
+  </div>`;
 }
 
 export default function ListingMap({ listings, onBoundsChange, fitKey = "", zoom, note = DEFAULT_NOTE }: Props) {
@@ -114,7 +169,7 @@ export default function ListingMap({ listings, onBoundsChange, fitKey = "", zoom
           center: { lat: 43.6532, lng: -79.3832 },
           zoom: zoom ?? 11,
           mapId: MAP_ID,
-          // Map / Satellite switch, top right (the source label sits top left). Google adds a
+          // Map / Satellite switch, top right (the source label sits bottom left). Google adds a
           // "Labels" checkbox to Satellite for street names over the imagery.
           mapTypeControl: true,
           mapTypeControlOptions: {
@@ -127,7 +182,19 @@ export default function ListingMap({ listings, onBoundsChange, fitKey = "", zoom
         });
         markerClassRef.current = AdvancedMarkerElement;
         infoRef.current = new InfoWindow();
-        clustererRef.current = new MarkerClusterer({ map });
+        clustererRef.current = new MarkerClusterer({
+          map,
+          // Counts listings, not pins: a pin for a 10-unit building adds 10
+          renderer: {
+            render: ({ markers, position }) => {
+              const count = markers.reduce(
+                (sum, m) => sum + (listingCounts.get(m as google.maps.marker.AdvancedMarkerElement) ?? 1),
+                0
+              );
+              return new AdvancedMarkerElement({ position, content: clusterIcon(count), zIndex: 1000 + count });
+            },
+          },
+        });
         mapRef.current = map;
 
         idleListener = map.addListener("idle", () => {
@@ -169,24 +236,25 @@ export default function ListingMap({ listings, onBoundsChange, fitKey = "", zoom
     const bounds = new google.maps.LatLngBounds();
     const markers: google.maps.marker.AdvancedMarkerElement[] = [];
 
+    // One pin per spot: listings within about a metre of each other share it
+    const groups = new Map<string, MapListing[]>();
     for (const l of listings) {
       if (l.latitude == null || l.longitude == null) continue;
-      const position = { lat: Number(l.latitude), lng: Number(l.longitude) };
-      bounds.extend(position);
+      const key = `${Number(l.latitude).toFixed(5)},${Number(l.longitude).toFixed(5)}`;
+      groups.set(key, [...(groups.get(key) ?? []), l]);
+    }
 
-      const addr = streetAddress(l, { unit: false });
-      const lease = l.transactionType?.includes("Lease");
-      const marker = new Marker({ position, content: pin(), title: addr || l.mlsNumber, gmpClickable: true });
+    for (const group of groups.values()) {
+      const position = { lat: Number(group[0].latitude), lng: Number(group[0].longitude) };
+      bounds.extend(position);
+      const title =
+        group.length > 1
+          ? `${group.length} listings`
+          : streetAddress(group[0], { unit: false }) || group[0].mlsNumber;
+      const marker = new Marker({ position, content: pin(group.length), title, gmpClickable: true });
+      listingCounts.set(marker, group.length);
       marker.addEventListener("gmp-click", () => {
-        info.setContent(
-          `<div class="text-sm">
-            <div class="font-bold">${formatPrice(l.listPrice)}${lease ? "/mo" : ""}</div>
-            <div>${escapeHtml(addr || "Address unavailable")}</div>
-            <div class="text-slate-500">${escapeHtml(l.city || "")}</div>
-            ${l.bedrooms ? `<div>${l.bedrooms} bed / ${l.bathrooms || 0} bath</div>` : ""}
-            <a href="/listings/${encodeURIComponent(l.mlsNumber)}" class="text-blue-600 text-xs">View details</a>
-          </div>`
-        );
+        info.setContent(popupHtml(group));
         info.open({ map, anchor: marker });
       });
       markers.push(marker);
@@ -227,13 +295,34 @@ export default function ListingMap({ listings, onBoundsChange, fitKey = "", zoom
           border-radius: 50%;
           box-shadow: 0 1px 4px rgba(0,0,0,0.3);
         }
+        .listing-pin-group {
+          width: auto;
+          min-width: 22px;
+          height: 22px;
+          padding: 0 5px;
+          border-radius: 11px;
+          color: white;
+          font: 600 11px/18px system-ui, sans-serif;
+          text-align: center;
+        }
+        .listing-cluster {
+          min-width: 32px;
+          height: 32px;
+          padding: 0 8px;
+          border-radius: 16px;
+          background: rgba(15, 23, 42, 0.85);
+          border: 3px solid rgba(255, 255, 255, 0.8);
+          box-shadow: 0 1px 6px rgba(0,0,0,0.35);
+          color: white;
+          font: 600 12px/26px system-ui, sans-serif;
+          text-align: center;
+        }
       `}</style>
       <div ref={containerRef} className="absolute inset-0" />
       {note && (
-        // Stops short of the Map / Satellite switch in the top-right corner (except when opened on a phone)
-        <div
-          className={`absolute top-2 left-2 ${noteOpen ? "max-w-[calc(100%-1rem)]" : "max-w-[calc(100%-11rem)]"} sm:max-w-[calc(100%-11rem)] text-[11px] text-slate-600`}
-        >
+        // Bottom left, above the Google logo: clear of the Map / Satellite switch (top right),
+        // the zoom and Street View controls (bottom right), and pin popups, which open upward
+        <div className="absolute bottom-7 left-2 max-w-[calc(100%-4rem)] flex flex-col-reverse items-start gap-1 text-[11px] text-slate-600">
           <button
             type="button"
             onClick={() => setNoteOpen((o) => !o)}
@@ -243,7 +332,7 @@ export default function ListingMap({ listings, onBoundsChange, fitKey = "", zoom
           >
             i
           </button>
-          <p className={`${noteOpen ? "block mt-5" : "hidden"} sm:block sm:mt-0 bg-white/90 rounded px-2 py-0.5 shadow-sm`}>
+          <p className={`${noteOpen ? "block" : "hidden"} sm:block bg-white/90 rounded px-2 py-0.5 shadow-sm`}>
             {note}
           </p>
         </div>

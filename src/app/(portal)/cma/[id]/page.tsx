@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { use, useCallback, useEffect, useState } from "react";
+import { streetAddress, type AddressFields } from "@/lib/listing-address";
 
 type Tab = "search" | "selected" | "sold" | "summary";
 
@@ -78,8 +79,8 @@ function formatPrice(n: number | string | null | undefined): string {
   return "$" + Number(n).toLocaleString("en-CA", { maximumFractionDigits: 0 });
 }
 
-function formatAddr(l: { streetNumber?: string | null; streetName?: string | null; unitNumber?: string | null; city?: string | null }): string {
-  const parts = [l.unitNumber ? `${l.unitNumber}-` : "", l.streetNumber, l.streetName].filter(Boolean).join(" ");
+function formatAddr(l: AddressFields & { city?: string | null }): string {
+  const parts = streetAddress(l) ?? "";
   return l.city ? `${parts}, ${l.city}` : parts;
 }
 

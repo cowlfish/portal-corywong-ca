@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, jsonSuccess, jsonError } from "@/lib/api-helpers";
 import { notifyAgent } from "@/lib/notify";
+import { ADDRESS_SELECT, streetAddress } from "@/lib/listing-address";
 
 export async function GET(
   _request: NextRequest,
@@ -79,7 +80,7 @@ export async function POST(
   const { id } = await params;
   const listing = await prisma.mlsListing.findFirst({
     where: { OR: [{ id }, { mlsNumber: id }] },
-    select: { id: true, mlsNumber: true, streetNumber: true, streetName: true, city: true },
+    select: { id: true, mlsNumber: true, ...ADDRESS_SELECT, city: true },
   });
   if (!listing) return jsonError("Listing not found", 404);
 
@@ -161,7 +162,8 @@ export async function POST(
       where: { id: user.userId },
       select: { email: true, firstName: true, lastName: true },
     });
-    const address = [listing.streetNumber, listing.streetName].filter(Boolean).join(" ");
+    // Emailed only to Cory, so the real address
+    const address = streetAddress(listing, { unit: false, reveal: true });
     const name = author ? `${author.firstName} ${author.lastName}` : "A client";
     notifyAgent({
       subject: `${name} commented on ${address || `MLS® ${listing.mlsNumber}`}`,

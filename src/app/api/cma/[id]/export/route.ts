@@ -1,13 +1,14 @@
 import { prisma } from "@/lib/db";
 import { requireAuth, jsonError } from "@/lib/api-helpers";
+import { streetAddress, type AddressFields } from "@/lib/listing-address";
 
 function fmt(n: unknown): string {
   if (n == null) return "—";
   return "$" + Number(n).toLocaleString("en-CA", { maximumFractionDigits: 0 });
 }
 
-function addr(l: { streetNumber?: string | null; streetName?: string | null; unitNumber?: string | null; city?: string | null }): string {
-  const parts = [l.unitNumber ? `${l.unitNumber}-` : "", l.streetNumber, l.streetName].filter(Boolean).join(" ");
+function addr(l: AddressFields & { city?: string | null }): string {
+  const parts = streetAddress(l) ?? "";
   return l.city ? `${parts}, ${l.city}` : parts;
 }
 

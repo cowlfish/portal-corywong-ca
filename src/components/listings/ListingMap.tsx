@@ -2,15 +2,14 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
+import { streetAddress, type AddressFields } from "@/lib/listing-address";
 
-interface MapListing {
+interface MapListing extends AddressFields {
   id: string;
   mlsNumber: string;
   listPrice: string | number;
   latitude: string | number | null;
   longitude: string | number | null;
-  streetNumber: string | null;
-  streetName: string | null;
   city: string | null;
   bedrooms: number | null;
   bathrooms: number | null;
@@ -166,7 +165,7 @@ export default function ListingMap({ listings, onBoundsChange, fitKey = "", zoom
       const position = { lat: Number(l.latitude), lng: Number(l.longitude) };
       bounds.extend(position);
 
-      const addr = [l.streetNumber, l.streetName].filter(Boolean).join(" ");
+      const addr = streetAddress(l, { unit: false });
       const lease = l.transactionType?.includes("Lease");
       const marker = new Marker({ position, content: pin(), title: addr || l.mlsNumber, gmpClickable: true });
       marker.addEventListener("gmp-click", () => {

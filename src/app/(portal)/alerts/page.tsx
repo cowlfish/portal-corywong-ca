@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { streetAddress } from "@/lib/listing-address";
 
 interface Alert {
   id: string;
@@ -14,6 +15,10 @@ interface Alert {
     listPrice: string;
     streetNumber: string | null;
     streetName: string | null;
+    streetDirection?: string | null;
+    streetSuffix?: string | null;
+    streetDirSuffix?: string | null;
+    addressDisplay?: boolean | null;
     city: string | null;
     bedrooms: number | null;
     bathrooms: number | null;
@@ -89,7 +94,7 @@ export default function AlertsPage() {
         <div className="space-y-3">
           {alerts.map((alert) => {
             const l = alert.listing;
-            const address = [l.streetNumber, l.streetName].filter(Boolean).join(" ");
+            const address = streetAddress(l, { unit: false }) ?? "";
             const isUnread = !alert.readAt;
 
             return (

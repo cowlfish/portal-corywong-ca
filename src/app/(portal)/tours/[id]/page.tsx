@@ -3,6 +3,7 @@
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { streetAddress } from "@/lib/listing-address";
 
 interface TourStop {
   id: string;
@@ -45,6 +46,10 @@ interface ListingResult {
   listPrice: string;
   streetNumber: string | null;
   streetName: string | null;
+  streetDirection?: string | null;
+  streetSuffix?: string | null;
+  streetDirSuffix?: string | null;
+  addressDisplay?: boolean | null;
   city: string | null;
   bedrooms: number | null;
   bathrooms: number | null;
@@ -535,7 +540,7 @@ export default function TourEditorPage({
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-slate-900 truncate">
-                      {listing.streetNumber} {listing.streetName} — {listing.city}
+                      {streetAddress(listing, { unit: false }) ?? "Address unavailable"} — {listing.city}
                     </div>
                     <div className="text-xs text-slate-500">
                       MLS# {listing.mlsNumber} | ${Number(listing.listPrice).toLocaleString()} |{" "}

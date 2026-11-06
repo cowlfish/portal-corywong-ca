@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { streetAddress, type AddressFields } from "@/lib/listing-address";
 
 interface Author {
   id: string;
@@ -10,11 +11,9 @@ interface Author {
   role: string;
 }
 
-interface Listing {
+interface Listing extends AddressFields {
   id: string;
   mlsNumber: string;
-  streetNumber: string | null;
-  streetName: string | null;
   city: string | null;
   listPrice: string | number;
 }
@@ -58,7 +57,8 @@ const VIS_COLORS: Record<string, string> = {
 };
 
 function formatAddress(l: Listing): string {
-  return [l.streetNumber, l.streetName].filter(Boolean).join(" ") || l.mlsNumber;
+  // Agent-only page: the real address
+  return streetAddress(l, { unit: false, reveal: true }) || l.mlsNumber;
 }
 
 export default function AgentCommentsPage() {

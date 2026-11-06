@@ -8,6 +8,7 @@ import PhotoCarousel from "@/components/listings/PhotoCarousel";
 import CommentThread from "@/components/listings/CommentThread";
 import ShowingRequestForm from "@/components/listings/ShowingRequestForm";
 import { daysOnMarket } from "@/lib/mls/days-on-market";
+import { streetAddress } from "@/lib/listing-address";
 
 const ListingMap = dynamic(() => import("@/components/listings/ListingMap"), {
   ssr: false,
@@ -58,7 +59,9 @@ interface Listing {
   streetName: string | null;
   streetSuffix: string | null;
   streetDirection: string | null;
+  streetDirSuffix: string | null;
   unitNumber: string | null;
+  addressDisplay: boolean;
   city: string | null;
   province: string | null;
   postalCode: string | null;
@@ -116,9 +119,7 @@ function formatPrice(price: string | number | null): string {
 }
 
 function formatAddress(l: Listing): string {
-  return [l.unitNumber ? `${l.unitNumber} -` : null, l.streetNumber, l.streetName, l.streetSuffix, l.streetDirection]
-    .filter(Boolean)
-    .join(" ");
+  return streetAddress(l) ?? "";
 }
 
 function formatSqft(l: Listing): string {
@@ -422,7 +423,12 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
                     latitude: l.latitude,
                     longitude: l.longitude,
                     streetNumber: l.streetNumber,
+                    streetDirection: l.streetDirection,
                     streetName: l.streetName,
+                    streetSuffix: l.streetSuffix,
+                    streetDirSuffix: l.streetDirSuffix,
+                    unitNumber: l.unitNumber,
+                    addressDisplay: l.addressDisplay,
                     city: l.city,
                     bedrooms: l.bedrooms,
                     bathrooms: l.bathrooms,

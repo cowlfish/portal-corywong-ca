@@ -45,7 +45,9 @@ model MlsListing {
   streetNumber    String? @map("street_number")
   streetName      String? @map("street_name")
   streetSuffix    String? @map("street_suffix")
+  // Direction before the name ("N Service Road"); streetDirSuffix is after it ("Queen Street E")
   streetDirection String? @map("street_direction")
+  streetDirSuffix String? @map("street_dir_suffix")
   unitNumber      String? @map("unit_number")
   city            String?
   province        String?

@@ -96,6 +96,27 @@ export class AmpreResoProvider implements MlsFeedProvider {
     }
   }
 
+  // Address fields only, a page at a time, for backfilling listings saved before these fields
+  // were stored (scripts/backfill-addresses.ts)
+  async fetchActiveAddresses(
+    after: string | null
+  ): Promise<{ listingKey: string; streetDirSuffix?: string; addressDisplay: boolean; geocodeAddress?: string }[]> {
+    const fields = [
+      "ListingKey", "StreetNumber", "StreetDirPrefix", "StreetName", "StreetSuffix", "StreetDirSuffix",
+      "UnparsedAddress", "City", "StateOrProvince", "PostalCode", "InternetAddressDisplayYN",
+    ].join(",");
+    const filter = `StandardStatus eq 'Active'` + (after ? ` and ListingKey gt '${after}'` : "");
+    const data = await this.request(
+      `/Property?$select=${fields}&$filter=${encodeURIComponent(filter)}&$orderby=ListingKey&$top=${BATCH_SIZE}`
+    );
+    return ((data.value ?? []) as Record<string, unknown>[]).map((raw) => ({
+      listingKey: String(raw.ListingKey),
+      streetDirSuffix: this.str(raw.StreetDirSuffix),
+      addressDisplay: raw.InternetAddressDisplayYN !== false,
+      geocodeAddress: this.geocodeAddress(raw),
+    }));
+  }
+
   async fetchListingsByKeys(listingKeys: string[]): Promise<MlsFeedListing[]> {
     const out: MlsFeedListing[] = [];
     for (let i = 0; i < listingKeys.length; i += DELTA_PAGE_SIZE) {
@@ -262,6 +283,7 @@ export class AmpreResoProvider implements MlsFeedProvider {
       streetName: this.str(raw.StreetName),
       streetSuffix: this.str(raw.StreetSuffix),
       streetDirection: this.str(raw.StreetDirPrefix),
+      streetDirSuffix: this.str(raw.StreetDirSuffix),
       unitNumber: this.str(raw.UnitNumber),
       city: this.str(raw.City),
       province: this.str(raw.StateOrProvince),
@@ -372,7 +394,10 @@ export class AmpreResoProvider implements MlsFeedProvider {
     // Civic numbers only ("51", "12A", "100-102"). Rural lots ("LOT 17", "TBD", "Vacant Lot")
     // aren't addresses; Geocodio would match some other building on the road.
     if (!number || !name || !/^\d+[A-Z]?(-\d+[A-Z]?)?$/i.test(number)) return undefined;
-    const street = [number, this.str(raw.StreetDirPrefix), name, this.str(raw.StreetSuffix), this.str(raw.StreetDirSuffix)]
+    // A leading direction is dropped when there's a trailing one: the feed sometimes has both
+    // ("215 W Queen Street E"), and Ontario addresses put it after the name
+    const dirSuffix = this.str(raw.StreetDirSuffix);
+    const street = [number, dirSuffix ? undefined : this.str(raw.StreetDirPrefix), name, this.str(raw.StreetSuffix), dirSuffix]
       .filter(Boolean)
       .join(" ");
     const city =

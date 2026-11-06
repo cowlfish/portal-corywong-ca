@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { streetAddress, type AddressFields } from "@/lib/listing-address";
 
 type Status = "NEW" | "CONTACTED" | "BOOKED" | "CLOSED";
 
@@ -15,12 +16,9 @@ interface ShowingRequest {
   status: Status;
   agentNotes: string | null;
   createdAt: string;
-  listing: {
+  listing: AddressFields & {
     id: string;
     mlsNumber: string;
-    unitNumber: string | null;
-    streetNumber: string | null;
-    streetName: string | null;
     city: string | null;
     listPrice: string | number;
     status: string;
@@ -48,8 +46,10 @@ function formatPrice(p: string | number) {
   return new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(Number(p));
 }
 
+// Agent-only page: the real address, marked when the public listing withholds it
 function address(l: ShowingRequest["listing"]) {
-  return [l.unitNumber && `${l.unitNumber} -`, l.streetNumber, l.streetName].filter(Boolean).join(" ");
+  const a = streetAddress(l, { reveal: true }) ?? "";
+  return l.addressDisplay === false ? `${a} (not shown publicly)` : a;
 }
 
 export default function AgentShowingRequestsPage() {

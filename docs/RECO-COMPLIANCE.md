@@ -41,6 +41,10 @@ features as they actually work:
 
 - **Other brokerages' listings** (the IDX feed): credit the listing brokerage. Cards and detail pages show
   "Listed by {office}". Bulletin 5.3 also asks for the listing brokerage's contact details; see open item 4.
+- **Withheld addresses**: when the seller hasn't allowed the address online (TRREB's `InternetAddressDisplayYN`),
+  the listing is still shown, but with "Address not disclosed", no map, only the first three characters of the
+  postal code, and it's left out of map and street-name searches and never geocoded. The address is removed
+  on the server (`src/lib/listing-address.ts`); only Cory's agent pages and emails show it.
 - **Sold properties**: the delta sync keeps listings after they sell or expire, but public listing pages
   and `/api/listings/[id]` now return only `ACTIVE` listings. Publishing "sold", or a sold price, needs
   written consent under 5.4, and the IDX licence doesn't cover sold data anyway.

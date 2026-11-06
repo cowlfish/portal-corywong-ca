@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { propertyTypeWhere } from "@/lib/mls/property-types";
 import { NOT_COMMERCIAL } from "@/lib/mls/listing-scope";
+import { ADDRESS_SELECT, ADDRESS_SHOWN, withoutHiddenAddress } from "@/lib/listing-address";
 
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
@@ -66,7 +67,8 @@ export async function GET(request: NextRequest) {
   const q = sp.get("q");
   if (q) {
     and.push({ OR: [
-      { streetName: { contains: q, mode: "insensitive" } },
+      // A street-name match would reveal where a withheld address is
+      { streetName: { contains: q, mode: "insensitive" }, ...ADDRESS_SHOWN },
       { city: { contains: q, mode: "insensitive" } },
       { neighbourhood: { contains: q, mode: "insensitive" } },
       { community: { contains: q, mode: "insensitive" } },
@@ -87,6 +89,8 @@ export async function GET(request: NextRequest) {
     if ([swLat, swLng, neLat, neLng].every((n) => !isNaN(n))) {
       where.latitude = { gte: swLat, lte: neLat };
       where.longitude = { gte: swLng, lte: neLng };
+      // Withheld addresses have no exact location, so they're left out of map searches
+      Object.assign(where, ADDRESS_SHOWN);
     }
   }
 
@@ -124,10 +128,7 @@ export async function GET(request: NextRequest) {
           propertyType: true,
           propertySubType: true,
           transactionType: true,
-          streetNumber: true,
-          streetName: true,
-          streetSuffix: true,
-          unitNumber: true,
+          ...ADDRESS_SELECT,
           city: true,
           province: true,
           neighbourhood: true,
@@ -162,7 +163,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      listings,
+      listings: listings.map(withoutHiddenAddress),
       pagination: {
         page,
         limit,

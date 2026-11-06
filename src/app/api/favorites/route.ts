@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, jsonSuccess, jsonError } from "@/lib/api-helpers";
+import { ADDRESS_SELECT, withoutHiddenAddress } from "@/lib/listing-address";
 
 export async function GET() {
   const auth = await requireAuth();
@@ -15,8 +16,7 @@ export async function GET() {
           mlsNumber: true,
           status: true,
           listPrice: true,
-          streetNumber: true,
-          streetName: true,
+          ...ADDRESS_SELECT,
           city: true,
           bedrooms: true,
           bathrooms: true,
@@ -33,7 +33,7 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  return jsonSuccess({ favorites });
+  return jsonSuccess({ favorites: favorites.map((f) => ({ ...f, listing: withoutHiddenAddress(f.listing) })) });
 }
 
 export async function POST(req: NextRequest) {

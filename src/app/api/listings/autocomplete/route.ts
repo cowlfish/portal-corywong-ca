@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { NOT_COMMERCIAL } from "@/lib/mls/listing-scope";
+import { ADDRESS_SELECT, ADDRESS_SHOWN, streetAddress } from "@/lib/listing-address";
 
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q")?.trim();
@@ -14,16 +15,15 @@ export async function GET(request: NextRequest) {
         where: {
           status: "ACTIVE",
           AND: [NOT_COMMERCIAL],
+          // Never suggest a withheld address by its street or postal code
+          ...ADDRESS_SHOWN,
           OR: [
             { streetName: { contains: q, mode: "insensitive" } },
             { postalCode: { startsWith: q.toUpperCase() } },
           ],
         },
         select: {
-          streetNumber: true,
-          streetName: true,
-          streetSuffix: true,
-          unitNumber: true,
+          ...ADDRESS_SELECT,
           city: true,
           postalCode: true,
           mlsNumber: true,
@@ -62,8 +62,7 @@ export async function GET(request: NextRequest) {
         },
         select: {
           mlsNumber: true,
-          streetNumber: true,
-          streetName: true,
+          ...ADDRESS_SELECT,
           city: true,
           listPrice: true,
         },
@@ -74,18 +73,17 @@ export async function GET(request: NextRequest) {
     const suggestions: { type: string; text: string; value: string; count?: number }[] = [];
 
     for (const m of mlsMatches) {
-      const addr = [m.streetNumber, m.streetName].filter(Boolean).join(" ");
+      const addr = streetAddress(m, { unit: false });
       suggestions.push({
         type: "mls",
-        text: `MLS® ${m.mlsNumber} — ${addr}, ${m.city}`,
+        text: `MLS® ${m.mlsNumber} — ${[addr, m.city].filter(Boolean).join(", ")}`,
         value: m.mlsNumber,
       });
     }
 
     for (const a of addresses) {
-      const addr = [a.unitNumber ? `${a.unitNumber} -` : null, a.streetNumber, a.streetName, a.streetSuffix]
-        .filter(Boolean)
-        .join(" ");
+      const addr = streetAddress(a);
+      if (!addr) continue;
       suggestions.push({
         type: "address",
         text: `${addr}, ${a.city}`,

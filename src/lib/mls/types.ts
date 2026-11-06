@@ -15,6 +15,7 @@ export interface MlsFeedListing {
   streetName?: string;
   streetSuffix?: string;
   streetDirection?: string;
+  streetDirSuffix?: string;
   unitNumber?: string;
   city?: string;
   province?: string;

@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/auth";
 import { jsonSuccess, jsonError } from "@/lib/api-helpers";
 import { notifyAgent } from "@/lib/notify";
 import { NOT_COMMERCIAL } from "@/lib/mls/listing-scope";
+import { ADDRESS_SELECT, streetAddress } from "@/lib/listing-address";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
 
   const listing = await prisma.mlsListing.findFirst({
     where: { id: listingId, status: "ACTIVE", AND: [NOT_COMMERCIAL] },
-    select: { id: true, mlsNumber: true, unitNumber: true, streetNumber: true, streetName: true, city: true, listPrice: true },
+    select: { id: true, mlsNumber: true, ...ADDRESS_SELECT, city: true, listPrice: true },
   });
   if (!listing) return jsonError("This listing is no longer available", 404);
 
@@ -59,9 +60,10 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  const address = [listing.unitNumber && `${listing.unitNumber} -`, listing.streetNumber, listing.streetName]
-    .filter(Boolean)
-    .join(" ");
+  // This email goes only to Cory, so it carries the real address
+  const address =
+    (streetAddress(listing, { reveal: true }) ?? "") +
+    (listing.addressDisplay === false ? " (address not shown publicly)" : "");
   const price = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(
     Number(listing.listPrice)
   );

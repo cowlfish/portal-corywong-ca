@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, jsonSuccess, jsonError } from "@/lib/api-helpers";
 import { Prisma } from "@/generated/prisma/client";
+import { ADDRESS_SELECT } from "@/lib/listing-address";
 
 export async function GET(request: NextRequest) {
   const { user, error } = await requireAuth();
@@ -31,8 +32,7 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           mlsNumber: true,
-          streetNumber: true,
-          streetName: true,
+          ...ADDRESS_SELECT,
           city: true,
           listPrice: true,
         },

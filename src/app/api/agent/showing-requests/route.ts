@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, jsonSuccess, jsonError } from "@/lib/api-helpers";
 import { ShowingRequestStatus } from "@/generated/prisma/client";
+import { ADDRESS_SELECT } from "@/lib/listing-address";
 
 const STATUSES = Object.values(ShowingRequestStatus);
 
@@ -20,9 +21,7 @@ export async function GET(req: NextRequest) {
         select: {
           id: true,
           mlsNumber: true,
-          unitNumber: true,
-          streetNumber: true,
-          streetName: true,
+          ...ADDRESS_SELECT,
           city: true,
           listPrice: true,
           status: true,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { NOT_COMMERCIAL } from "@/lib/mls/listing-scope";
+import { withoutHiddenAddress } from "@/lib/listing-address";
 
 export async function GET(
   _request: NextRequest,
@@ -31,7 +32,7 @@ export async function GET(
       return NextResponse.json({ error: "Listing not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ listing });
+    return NextResponse.json({ listing: withoutHiddenAddress(listing) });
   } catch (error) {
     console.error("Listing detail error:", error);
     return NextResponse.json({ error: "Failed to fetch listing" }, { status: 500 });

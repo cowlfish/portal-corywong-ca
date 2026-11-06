@@ -364,6 +364,7 @@ async function upsertListing(
     streetName: listing.streetName,
     streetSuffix: listing.streetSuffix,
     streetDirection: listing.streetDirection,
+    streetDirSuffix: listing.streetDirSuffix,
     unitNumber: listing.unitNumber,
     city: listing.city,
     province: listing.province,

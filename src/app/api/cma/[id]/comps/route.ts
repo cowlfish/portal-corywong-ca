@@ -3,6 +3,7 @@ import { requireAuth, jsonSuccess, jsonError } from "@/lib/api-helpers";
 import { NextRequest } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
 import { NOT_COMMERCIAL } from "@/lib/mls/listing-scope";
+import { withoutHiddenAddress } from "@/lib/listing-address";
 
 export async function GET(
   request: NextRequest,
@@ -98,7 +99,7 @@ export async function GET(
   );
 
   const results = listings.map((l) => ({
-    ...l,
+    ...withoutHiddenAddress(l),
     selected: selectedIds.has(l.id),
   }));
 
@@ -145,7 +146,7 @@ export async function POST(
     },
   });
 
-  return jsonSuccess({ comp }, 201);
+  return jsonSuccess({ comp: { ...comp, listing: withoutHiddenAddress(comp.listing) } }, 201);
 }
 
 export async function DELETE(

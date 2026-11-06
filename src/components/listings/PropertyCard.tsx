@@ -1,7 +1,8 @@
 import { daysOnMarket } from "@/lib/mls/days-on-market";
 import Link from "next/link";
+import { streetAddress, type AddressFields } from "@/lib/listing-address";
 
-export interface PropertyCardListing {
+export interface PropertyCardListing extends AddressFields {
   id: string;
   mlsNumber: string;
   listPrice: string | number;
@@ -39,10 +40,7 @@ function formatPrice(price: string | number): string {
 }
 
 function formatAddress(l: PropertyCardListing): string {
-  const parts = [l.unitNumber ? `${l.unitNumber} -` : null, l.streetNumber, l.streetName, l.streetSuffix]
-    .filter(Boolean)
-    .join(" ");
-  return parts || "Address unavailable";
+  return streetAddress(l) ?? "Address unavailable";
 }
 
 function formatSqft(l: PropertyCardListing): string | null {

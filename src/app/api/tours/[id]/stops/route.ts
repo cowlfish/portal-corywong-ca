@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, jsonSuccess, jsonError } from "@/lib/api-helpers";
+import { streetAddress, withoutHiddenAddress } from "@/lib/listing-address";
 
 export async function POST(
   req: NextRequest,
@@ -27,18 +28,20 @@ export async function POST(
   };
 
   if (listingId) {
-    const listing = await prisma.mlsListing.findUnique({
+    // Tours can be shared by public link, so a withheld address stays withheld here too
+    const found = await prisma.mlsListing.findUnique({
       where: { id: listingId },
       include: {
         photos: { take: 1, orderBy: { displayOrder: "asc" }, select: { photoUrl: true } },
       },
     });
-    if (!listing) return jsonError("Listing not found", 400);
+    if (!found) return jsonError("Listing not found", 400);
+    const listing = withoutHiddenAddress(found);
 
     stopData = {
       ...stopData,
       listingId: listing.id,
-      address: [listing.streetNumber, listing.streetName, listing.streetSuffix].filter(Boolean).join(" "),
+      address: streetAddress(found, { unit: false }) ?? "",
       city: listing.city,
       province: listing.province,
       postalCode: listing.postalCode,

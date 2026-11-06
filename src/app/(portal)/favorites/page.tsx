@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { streetAddress } from "@/lib/listing-address";
 
 interface Listing {
   id: string;
@@ -8,6 +9,10 @@ interface Listing {
   status: string;
   listPrice: string;
   streetNumber: string | null;
+  streetDirection?: string | null;
+  streetSuffix?: string | null;
+  streetDirSuffix?: string | null;
+  addressDisplay?: boolean | null;
   streetName: string | null;
   city: string | null;
   bedrooms: number | null;
@@ -88,7 +93,7 @@ export default function FavoritesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {favorites.map((fav) => {
             const l = fav.listing;
-            const address = [l.streetNumber, l.streetName].filter(Boolean).join(" ");
+            const address = streetAddress(l, { unit: false }) ?? "";
             const photo = l.photos?.[0]?.photoUrl;
 
             return (

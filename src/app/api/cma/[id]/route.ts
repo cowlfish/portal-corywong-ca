@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { requireAuth, jsonSuccess, jsonError } from "@/lib/api-helpers";
 import { NextRequest } from "next/server";
+import { withoutHiddenAddress } from "@/lib/listing-address";
 
 async function getOwnedReport(userId: string, reportId: string) {
   return prisma.cmaReport.findFirst({
@@ -32,7 +33,9 @@ export async function GET(
   });
 
   if (!report) return jsonError("CMA report not found", 404);
-  return jsonSuccess({ report });
+  return jsonSuccess({
+    report: { ...report, comps: report.comps.map((c) => ({ ...c, listing: withoutHiddenAddress(c.listing) })) },
+  });
 }
 
 export async function PUT(

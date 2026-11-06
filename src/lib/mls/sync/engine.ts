@@ -208,11 +208,11 @@ export async function reconcileRemovedListings(provider: MlsFeedProvider): Promi
     select: { listingKey: true },
   });
 
-  // A short or failed key listing must not wipe the mirror
-  if (feedKeys.size < active.length * 0.8) {
-    throw new Error(
-      `Feed returned ${feedKeys.size} listings but the mirror has ${active.length} active; not reconciling`
-    );
+  // fetchAllListingKeys already checks the download against the feed's own total. Comparing with
+  // the mirror instead would lock up once stale listings pile up (it did: Nov 2026), so this is
+  // only a floor against an empty or broken feed.
+  if (feedKeys.size < 10_000) {
+    throw new Error(`Feed returned only ${feedKeys.size} listings; not reconciling`);
   }
 
   const gone = active.map((l) => l.listingKey).filter((k) => !feedKeys.has(k));

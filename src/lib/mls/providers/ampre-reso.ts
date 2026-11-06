@@ -83,17 +83,28 @@ export class AmpreResoProvider implements MlsFeedProvider {
     };
   }
 
+  // Every listing key in the feed. Throws if the download comes up short of the total the feed
+  // reports, so a cut-off or failed listing can never make the reconcile remove live listings.
   async fetchAllListingKeys(): Promise<Set<string>> {
     const keys = new Set<string>();
     let after: string | null = null;
+    let reported: number | null = null;
     for (;;) {
       const filter: string = after ? `&$filter=${encodeURIComponent(`ListingKey gt '${after}'`)}` : "";
-      const data = await this.request(`/Property?$select=ListingKey&$orderby=ListingKey&$top=${BATCH_SIZE}${filter}`);
+      const count = after ? "" : "&$count=true";
+      const data = await this.request(`/Property?$select=ListingKey&$orderby=ListingKey&$top=${BATCH_SIZE}${filter}${count}`);
+      if (!after && typeof data["@odata.count"] === "number") reported = data["@odata.count"] as number;
       const rows = (data.value ?? []) as { ListingKey: string }[];
       for (const r of rows) keys.add(r.ListingKey);
-      if (rows.length < BATCH_SIZE) return keys;
+      if (rows.length < BATCH_SIZE) break;
       after = rows[rows.length - 1].ListingKey;
     }
+    if (reported === null) throw new Error("Feed didn't report its listing total; not trusting the key list");
+    // Listings come and go while paging, so allow a little drift
+    if (keys.size < reported * 0.98) {
+      throw new Error(`Downloaded ${keys.size} listing keys but the feed reports ${reported}`);
+    }
+    return keys;
   }
 
   // Address fields only, a page at a time, for backfilling listings saved before these fields

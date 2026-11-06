@@ -9,6 +9,8 @@ import CommentThread from "@/components/listings/CommentThread";
 import ShowingRequestForm from "@/components/listings/ShowingRequestForm";
 import { daysOnMarket } from "@/lib/mls/days-on-market";
 import { streetAddress } from "@/lib/listing-address";
+import { lastSearch } from "@/lib/search-state";
+import { useRouter } from "next/navigation";
 
 const ListingMap = dynamic(() => import("@/components/listings/ListingMap"), {
   ssr: false,
@@ -217,6 +219,7 @@ function SaveToListButton({ listingId, mlsNumber }: { listingId: string; mlsNumb
 
 export default function ListingDetailClient({ listing }: { listing: Listing }) {
   const l = listing;
+  const router = useRouter();
   const address = formatAddress(l);
   // TRREB style: "3+1" is above grade plus below grade
   const beds = l.bedrooms ? `${l.bedrooms}${l.bedroomsPlus ? `+${l.bedroomsPlus}` : ""}` : null;
@@ -226,7 +229,18 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="mb-4">
-        <Link href="/listings" className="text-sm text-slate-500 hover:text-slate-700 transition-colors">
+        <Link
+          href="/listings"
+          onClick={(e) => {
+            // Back to the visitor's own search (filters, page, map area), not a blank one
+            const url = lastSearch();
+            if (url?.startsWith("/listings") && !e.metaKey && !e.ctrlKey) {
+              e.preventDefault();
+              router.push(url);
+            }
+          }}
+          className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+        >
           &larr; Back to Search
         </Link>
       </div>

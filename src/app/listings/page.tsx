@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import PropertyCard, { type PropertyCardListing } from "@/components/listings/PropertyCard";
 import PropertyFilters, { type FilterValues, INITIAL_FILTERS } from "@/components/listings/PropertyFilters";
+import { rememberScroll, rememberSearch, savedScroll } from "@/lib/search-state";
 
 const ListingMap = dynamic(() => import("@/components/listings/ListingMap"), {
   ssr: false,
@@ -75,8 +76,20 @@ export default function ListingsPage() {
   return <ListingsContent />;
 }
 
-function useInitialFilters(): FilterValues {
+// The whole search lives in the URL (filters, page, view, map area), so the back button, a
+// refresh or a shared link reopens the same results
+function useInitialSearch() {
   const sp = useSearchParams();
+  const view = sp.get("view");
+  return {
+    filters: filtersFromParams(sp),
+    page: Math.max(1, parseInt(sp.get("page") || "1", 10) || 1),
+    view: (view === "map" || view === "split" ? view : "list") as ViewMode,
+    mapView: sp.get("map"),
+  };
+}
+
+function filtersFromParams(sp: URLSearchParams | ReturnType<typeof useSearchParams>): FilterValues {
   return {
     transaction: sp.get("transaction") === "lease" ? "lease" : "sale",
     q: sp.get("q") || "",
@@ -94,14 +107,32 @@ function useInitialFilters(): FilterValues {
   };
 }
 
+// The URL for a search; defaults are left out to keep it short
+function searchUrl(f: FilterValues, page: number, view: ViewMode, mapView: string | null): string {
+  const params = new URLSearchParams();
+  for (const key of Object.keys(INITIAL_FILTERS) as (keyof FilterValues)[]) {
+    if (f[key] && f[key] !== INITIAL_FILTERS[key]) params.set(key, f[key]);
+  }
+  if (page > 1) params.set("page", String(page));
+  if (view !== "list") params.set("view", view);
+  // Where the map was: centre and zoom ("43.85976,-79.30695,13")
+  if (mapView && view === "map") params.set("map", mapView);
+  const qs = params.toString();
+  return qs ? `/listings?${qs}` : "/listings";
+}
+
 function ListingsContent() {
-  const initial = useInitialFilters();
+  const initial = useInitialSearch();
   const [listings, setListings] = useState<PropertyCardListing[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 24, total: 0, totalPages: 0 });
-  const [filters, setFilters] = useState<FilterValues>(initial);
-  const [view, setView] = useState<ViewMode>("list");
+  const [pagination, setPagination] = useState<Pagination>({ page: initial.page, limit: 24, total: 0, totalPages: 0 });
+  const [filters, setFilters] = useState<FilterValues>(initial.filters);
+  const [view, setView] = useState<ViewMode>(initial.view);
   const [loading, setLoading] = useState(true);
   const [mapBounds, setMapBounds] = useState<string | null>(null);
+  const [mapView, setMapView] = useState<string | null>(initial.mapView);
+  // Scroll position is saved only after it's been restored, so the empty page shown while
+  // results load doesn't overwrite it
+  const scrollRestored = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchListings = useCallback(
@@ -160,8 +191,52 @@ function ListingsContent() {
   );
 
   useEffect(() => {
+    // Map view: the map searches its own area once it has opened (handleBoundsChange)
     fetchListings(filters, pagination.page);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep the URL in step with the search, replacing (not adding) history entries
+  useEffect(() => {
+    const url = searchUrl(filters, pagination.page, view, mapView);
+    if (url !== window.location.pathname + window.location.search) window.history.replaceState(null, "", url);
+    rememberSearch(url);
+  }, [filters, pagination.page, view, mapView]);
+
+  // Back on the results: return to where the visitor had scrolled
+  useEffect(() => {
+    if (loading || scrollRestored.current) return;
+    scrollRestored.current = true;
+    const y = savedScroll(window.location.pathname + window.location.search);
+    if (y) window.scrollTo(0, y);
+  }, [loading]);
+
+  useEffect(() => {
+    // A timer, not requestAnimationFrame: browsers pause animation frames in background tabs
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onScroll = () => {
+      clearTimeout(timer);
+      const y = window.scrollY;
+      timer = setTimeout(() => {
+        // Only on the results page itself (not after navigating to a listing)
+        if (scrollRestored.current && window.location.pathname === "/listings") {
+          rememberScroll(window.location.pathname + window.location.search, y);
+        }
+      }, 150);
+    };
+    // And at the moment a link is followed, which doesn't depend on scroll events arriving
+    const onClick = (e: MouseEvent) => {
+      if (scrollRestored.current && (e.target as Element | null)?.closest?.("a[href]")) {
+        rememberScroll(window.location.pathname + window.location.search, window.scrollY);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("click", onClick, true);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("click", onClick, true);
+    };
   }, []);
 
   function handleApplyFilters(f: FilterValues) {
@@ -174,8 +249,9 @@ function ListingsContent() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function handleBoundsChange(bounds: string) {
+  function handleBoundsChange(bounds: string, at: string) {
     setMapBounds(bounds);
+    setMapView(at);
     if (view === "map") {
       fetchListings(filters, 1, bounds);
     }
@@ -238,7 +314,12 @@ function ListingsContent() {
 
         {view === "map" && (
           <div className="h-[calc(100vh-320px)] min-h-[500px] rounded-lg overflow-hidden border border-slate-200">
-            <ListingMap listings={listings} onBoundsChange={handleBoundsChange} fitKey={JSON.stringify(filters)} />
+            <ListingMap
+              listings={listings}
+              onBoundsChange={handleBoundsChange}
+              fitKey={JSON.stringify(filters)}
+              initialView={initial.view === "map" ? initial.mapView : null}
+            />
           </div>
         )}
 

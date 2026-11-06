@@ -18,13 +18,17 @@ interface MapListing extends AddressFields {
 
 interface Props {
   listings: MapListing[];
-  onBoundsChange?: (bounds: string) => void;
+  // bounds "south,west,north,east" for searching; view "lat,lng,zoom" for reopening the same spot
+  onBoundsChange?: (bounds: string, view: string) => void;
   // The map fits itself to the listings once per distinct key (e.g. when filters change),
   // not on every update: results reload as the map moves, and refitting would loop.
   fitKey?: string;
   zoom?: number;
   // Label over the map's bottom-left corner; null for none (the listing page has its own note)
   note?: ReactNode;
+  // "lat,lng,zoom" to reopen on, e.g. when returning to a search; skips the first fit.
+  // Centre and zoom rather than bounds: fitting saved bounds can land a zoom level out.
+  initialView?: string | null;
 }
 
 const DEFAULT_NOTE = (
@@ -133,7 +137,14 @@ function popupHtml(group: MapListing[]): string {
   </div>`;
 }
 
-export default function ListingMap({ listings, onBoundsChange, fitKey = "", zoom, note = DEFAULT_NOTE }: Props) {
+export default function ListingMap({
+  listings,
+  onBoundsChange,
+  fitKey = "",
+  zoom,
+  note = DEFAULT_NOTE,
+  initialView,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const clustererRef = useRef<MarkerClusterer | null>(null);
@@ -142,6 +153,8 @@ export default function ListingMap({ listings, onBoundsChange, fitKey = "", zoom
   const fittedKey = useRef<string | null>(null);
   // Latest callback without re-creating the map when the parent re-renders
   const onBoundsRef = useRef(onBoundsChange);
+  // Where to open, read once when the map is created
+  const startRef = useRef({ view: initialView, fitKey });
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(!API_KEY);
   // Phones: the note is a tap-to-open button so it doesn't cover the map
@@ -180,6 +193,12 @@ export default function ListingMap({ listings, onBoundsChange, fitKey = "", zoom
           fullscreenControl: false,
           clickableIcons: false,
         });
+        const [lat, lng, startZoom] = (startRef.current.view ?? "").split(",").map(Number);
+        if ([lat, lng, startZoom].every(Number.isFinite)) {
+          map.setCenter({ lat, lng });
+          map.setZoom(startZoom);
+          fittedKey.current = startRef.current.fitKey;
+        }
         markerClassRef.current = AdvancedMarkerElement;
         infoRef.current = new InfoWindow();
         clustererRef.current = new MarkerClusterer({
@@ -204,7 +223,11 @@ export default function ListingMap({ listings, onBoundsChange, fitKey = "", zoom
             if (!b) return;
             const sw = b.getSouthWest();
             const ne = b.getNorthEast();
-            onBoundsRef.current?.(`${sw.lat()},${sw.lng()},${ne.lat()},${ne.lng()}`);
+            const c = map.getCenter();
+            onBoundsRef.current?.(
+              `${sw.lat()},${sw.lng()},${ne.lat()},${ne.lng()}`,
+              c ? `${c.lat().toFixed(5)},${c.lng().toFixed(5)},${Number((map.getZoom() ?? 11).toFixed(2))}` : ""
+            );
           }, 300);
         });
         setLoaded(true);

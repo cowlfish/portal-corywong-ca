@@ -54,15 +54,55 @@ export async function locatePostalCode(
   const shard = await loadShard(fsa);
   if (!shard) return null;
 
-  const exact = areaOnly ? undefined : shard[code.slice(3)];
-  if (exact) return { latitude: exact[0], longitude: exact[1], precision: "postal" };
+  const area = shapeOf(fsa, shard);
+  if (!area) return null;
 
-  // New or unlisted code: centre of its forward sortation area
+  const exact = areaOnly ? undefined : shard[code.slice(3)];
+  // GeoNames misplaces a few hundred codes (M4R 0A2, a Toronto condo, sits near Owen Sound;
+  // some are in the Yukon). A point far outside its area's usual spread is ignored.
+  if (exact && distanceKm(exact, area.centre) <= area.maxKm) {
+    return { latitude: exact[0], longitude: exact[1], precision: "postal" };
+  }
+
+  // New, unlisted or misplaced code: centre of its forward sortation area
+  return { latitude: area.centre[0], longitude: area.centre[1], precision: "area" };
+}
+
+interface AreaShape {
+  // Median point: unlike the mean, a few misplaced codes can't drag it away
+  centre: [number, number];
+  // How far a code may sit from the centre: twice the distance that 95% of the area's codes
+  // fall within, and at least 10 km (rural areas are large)
+  maxKm: number;
+}
+
+const shapes = new Map<string, AreaShape | null>();
+
+function shapeOf(fsa: string, shard: Shard): AreaShape | null {
+  if (shapes.has(fsa)) return shapes.get(fsa)!;
   const points = Object.values(shard);
-  if (points.length === 0) return null;
-  const latitude = points.reduce((sum, p) => sum + p[0], 0) / points.length;
-  const longitude = points.reduce((sum, p) => sum + p[1], 0) / points.length;
-  return { latitude: Number(latitude.toFixed(4)), longitude: Number(longitude.toFixed(4)), precision: "area" };
+  let shape: AreaShape | null = null;
+  if (points.length > 0) {
+    const median = (xs: number[]) => {
+      const s = [...xs].sort((a, b) => a - b);
+      return s[Math.floor(s.length / 2)];
+    };
+    const centre: [number, number] = [
+      Number(median(points.map((p) => p[0])).toFixed(4)),
+      Number(median(points.map((p) => p[1])).toFixed(4)),
+    ];
+    const distances = points.map((p) => distanceKm(p, centre)).sort((a, b) => a - b);
+    const p95 = distances[Math.min(distances.length - 1, Math.floor(distances.length * 0.95))];
+    shape = { centre, maxKm: Math.max(10, 2 * p95) };
+  }
+  shapes.set(fsa, shape);
+  return shape;
+}
+
+// Close enough at Ontario's latitudes for comparing distances within one postal area
+function distanceKm(a: [number, number], b: [number, number]): number {
+  const kmPerDegLng = 111 * Math.cos((a[0] * Math.PI) / 180);
+  return Math.hypot((a[0] - b[0]) * 111, (a[1] - b[1]) * kmPerDegLng);
 }
 
 // Street-address geocoding through Geocodio (geocod.io). Results may be stored permanently and

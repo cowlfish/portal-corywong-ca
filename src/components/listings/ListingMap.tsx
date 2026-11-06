@@ -89,6 +89,8 @@ export default function ListingMap({ listings, onBoundsChange, fitKey = "", zoom
   const onBoundsRef = useRef(onBoundsChange);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(!API_KEY);
+  // Phones: the note is a tap-to-open button so it doesn't cover the map
+  const [noteOpen, setNoteOpen] = useState(false);
 
   useEffect(() => {
     onBoundsRef.current = onBoundsChange;
@@ -228,9 +230,23 @@ export default function ListingMap({ listings, onBoundsChange, fitKey = "", zoom
       `}</style>
       <div ref={containerRef} className="absolute inset-0" />
       {note && (
-        <p className="absolute top-2 left-2 max-w-[calc(100%-1rem)] bg-white/90 rounded px-2 py-0.5 text-[11px] text-slate-600 shadow-sm">
-          {note}
-        </p>
+        // Stops short of the Map / Satellite switch in the top-right corner (except when opened on a phone)
+        <div
+          className={`absolute top-2 left-2 ${noteOpen ? "max-w-[calc(100%-1rem)]" : "max-w-[calc(100%-11rem)]"} sm:max-w-[calc(100%-11rem)] text-[11px] text-slate-600`}
+        >
+          <button
+            type="button"
+            onClick={() => setNoteOpen((o) => !o)}
+            aria-expanded={noteOpen}
+            aria-label="About pin locations"
+            className="sm:hidden w-6 h-6 rounded-full bg-white/90 shadow-sm font-semibold text-slate-700"
+          >
+            i
+          </button>
+          <p className={`${noteOpen ? "block mt-5" : "hidden"} sm:block sm:mt-0 bg-white/90 rounded px-2 py-0.5 shadow-sm`}>
+            {note}
+          </p>
+        </div>
       )}
     </div>
   );

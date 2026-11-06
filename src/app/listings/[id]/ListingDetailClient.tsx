@@ -68,6 +68,8 @@ interface Listing {
   area: string | null;
   latitude: string | number | null;
   longitude: string | number | null;
+  locationSource: string | null;
+  locationCredit: string | null;
   bedrooms: number | null;
   bedroomsPlus: number | null;
   bathrooms: number | null;
@@ -427,10 +429,24 @@ export default function ListingDetailClient({ listing }: { listing: Listing }) {
                     transactionType: l.transactionType,
                   }]}
                   zoom={15}
+                  note={null}
                 />
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                Approximate location, based on the postal code{l.postalCode ? ` (${l.postalCode})` : ""}.
+                {l.locationSource === "geocodio" ? (
+                  <>Location from the street address, via Geocodio{l.locationCredit ? `. Address data: ${l.locationCredit}` : ""}.</>
+                ) : l.locationSource === "area" ? (
+                  <>General area only.</>
+                ) : l.locationSource === "feed" ? null : (
+                  <>
+                    Approximate location, based on the postal code{l.postalCode ? ` (${l.postalCode})` : ""}. Postal code
+                    locations:{" "}
+                    <a href="https://www.geonames.org" target="_blank" rel="noopener noreferrer" className="underline">
+                      GeoNames
+                    </a>{" "}
+                    (CC BY 4.0).
+                  </>
+                )}
               </p>
             </div>
           )}

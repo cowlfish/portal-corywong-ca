@@ -276,6 +276,8 @@ export class AmpreResoProvider implements MlsFeedProvider {
 
       latitude: this.dec(raw.Latitude, 3),
       longitude: this.dec(raw.Longitude, 3),
+      geocodeAddress: this.geocodeAddress(raw),
+      addressDisplay: raw.InternetAddressDisplayYN !== false,
 
       // TRREB convention "3+1": above grade plus below grade
       bedrooms: this.int(raw.BedroomsAboveGrade) ?? this.int(raw.BedroomsTotal),
@@ -361,6 +363,25 @@ export class AmpreResoProvider implements MlsFeedProvider {
   // A number that fits a Decimal column with this many integer digits, or undefined.
   // Listing brokerages enter placeholder values (e.g. taxes of 888888888) that would
   // otherwise overflow the column and fail the whole listing.
+  // Built from the parts rather than UnparsedAddress, which puts the unit after the street
+  // ("690 Dorval Drive 500"). City comes from UnparsedAddress: City carries TRREB's district
+  // code ("Toronto E01"). StreetDirSuffix matters: Queen St E and W are kilometres apart.
+  private geocodeAddress(raw: Record<string, unknown>): string | undefined {
+    const number = this.str(raw.StreetNumber);
+    const name = this.str(raw.StreetName);
+    // Civic numbers only ("51", "12A", "100-102"). Rural lots ("LOT 17", "TBD", "Vacant Lot")
+    // aren't addresses; Geocodio would match some other building on the road.
+    if (!number || !name || !/^\d+[A-Z]?(-\d+[A-Z]?)?$/i.test(number)) return undefined;
+    const street = [number, this.str(raw.StreetDirPrefix), name, this.str(raw.StreetSuffix), this.str(raw.StreetDirSuffix)]
+      .filter(Boolean)
+      .join(" ");
+    const city =
+      this.str(raw.UnparsedAddress)?.split(",")[1]?.trim() ||
+      this.str(raw.City)?.replace(/\s+[A-Z]\d{2}$/, "");
+    if (!city) return undefined;
+    return [street, city, [this.str(raw.StateOrProvince) ?? "ON", this.str(raw.PostalCode)].filter(Boolean).join(" ")].join(", ");
+  }
+
   private dec(value: unknown, integerDigits: number): number | undefined {
     if (value === null || value === undefined || value === "") return undefined;
     const n = Number(value);

@@ -1,6 +1,6 @@
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/client";
-import { locatePostalCode } from "../geocode";
+import { geocodeAddresses, locatePostalCode } from "../geocode";
 import { COMMERCIAL_TYPE, NOT_COMMERCIAL } from "../listing-scope";
 import type {
   MlsFeedProvider,
@@ -321,16 +321,32 @@ async function upsertListing(
 ): Promise<"inserted" | "updated"> {
   const existing = await prisma.mlsListing.findUnique({
     where: { mlsNumber: listing.mlsNumber },
-    select: { id: true, listPrice: true },
+    select: { id: true, listPrice: true, latitude: true, geocodedAt: true, geocodeAddress: true, addressDisplay: true },
   });
 
-  // The feed has no coordinates; place the listing at its postal code
-  if (listing.latitude == null || listing.longitude == null) {
-    const location = await locatePostalCode(listing.postalCode);
-    if (location) {
-      listing.latitude = location.latitude;
-      listing.longitude = location.longitude;
+  // Updates keep the stored location (it may be Geocodio's) unless the address or the seller's
+  // address-display choice changed. New or changed listings start at their postal code and wait
+  // for geocodeStreetAddresses.
+  const addressDisplay = listing.addressDisplay !== false;
+  const geocodeAddress = listing.geocodeAddress ?? null;
+  const keepLocation =
+    existing != null &&
+    (existing.latitude != null || existing.geocodedAt != null) &&
+    existing.geocodeAddress === geocodeAddress &&
+    existing.addressDisplay === addressDisplay;
+  let location = {};
+  if (!keepLocation) {
+    if (listing.latitude != null && listing.longitude != null) {
+      location = { latitude: listing.latitude, longitude: listing.longitude, locationSource: "feed" };
+    } else {
+      const postal = await locatePostalCode(listing.postalCode, { areaOnly: !addressDisplay });
+      location = {
+        latitude: postal?.latitude ?? null,
+        longitude: postal?.longitude ?? null,
+        locationSource: postal?.precision ?? null,
+      };
     }
+    location = { ...location, locationPrecision: null, locationCredit: null, geocodedAt: null };
   }
 
   const data = {
@@ -357,8 +373,9 @@ async function upsertListing(
     community: listing.community,
     neighbourhood: listing.neighbourhood,
     area: listing.area,
-    latitude: listing.latitude,
-    longitude: listing.longitude,
+    geocodeAddress,
+    addressDisplay,
+    ...location,
     bedrooms: listing.bedrooms,
     bedroomsPlus: listing.bedroomsPlus,
     bathrooms: listing.bathrooms,
@@ -613,19 +630,23 @@ export async function geocodeListings({ maxListings = 2000, maxMs = 15_000 } = {
   let located = 0;
   let processed = 0;
   while (processed < maxListings && Date.now() - startTime < maxMs) {
-    const batch = await prisma.mlsListing.findMany({ where, select: { id: true, postalCode: true }, take: 200 });
+    const batch = await prisma.mlsListing.findMany({
+      where,
+      select: { id: true, postalCode: true, addressDisplay: true },
+      take: 200,
+    });
     if (batch.length === 0) break;
     const unknown: string[] = [];
     for (const l of batch) {
       processed++;
-      const location = await locatePostalCode(l.postalCode);
+      const location = await locatePostalCode(l.postalCode, { areaOnly: !l.addressDisplay });
       if (!location) {
         unknown.push(l.id);
         continue;
       }
       await prisma.mlsListing.update({
         where: { id: l.id },
-        data: { latitude: location.latitude, longitude: location.longitude },
+        data: { latitude: location.latitude, longitude: location.longitude, locationSource: location.precision },
       });
       located++;
     }
@@ -636,6 +657,72 @@ export async function geocodeListings({ maxListings = 2000, maxMs = 15_000 } = {
   }
   const remaining = await prisma.mlsListing.count({ where });
   return { located, remaining };
+}
+
+// Geocodio's free allowance is 2,500 lookups a day. Stay under it with room for manual tests,
+// and spread lookups across the day's 96 sync runs so any 24 hours stays under the limit
+// whatever time zone Geocodio counts days in. New listings (~1,300 a day) go first; the rest
+// of each day's allowance works through the backlog.
+const GEOCODIO_DAILY_LIMIT = 2400;
+const GEOCODIO_PER_RUN = Math.ceil(GEOCODIO_DAILY_LIMIT / 96);
+
+// Moves pins from the postal code to the street address. Every listing looked up gets
+// geocodedAt, whether or not Geocodio placed it, so it isn't retried until its address changes.
+export async function geocodeStreetAddresses({ maxLookups = GEOCODIO_PER_RUN } = {}): Promise<
+  { skipped: string } | { looked: number; placed: number; usedToday: number; remaining: number }
+> {
+  const apiKey = process.env.GEOCODIO_API_KEY;
+  if (!apiKey) return { skipped: "GEOCODIO_API_KEY is not set" };
+
+  const where = {
+    status: "ACTIVE" as const,
+    AND: [NOT_COMMERCIAL],
+    addressDisplay: true,
+    geocodeAddress: { not: null },
+    geocodedAt: null,
+  };
+  const dayStart = new Date();
+  dayStart.setUTCHours(0, 0, 0, 0);
+  const usedToday = await prisma.mlsListing.count({ where: { geocodedAt: { gte: dayStart } } });
+  const take = Math.min(maxLookups, GEOCODIO_DAILY_LIMIT - usedToday);
+
+  let looked = 0;
+  let placed = 0;
+  if (take > 0) {
+    const batch = await prisma.mlsListing.findMany({
+      where,
+      select: { id: true, geocodeAddress: true },
+      orderBy: { createdAt: "desc" },
+      take,
+    });
+    if (batch.length > 0) {
+      const results = await geocodeAddresses(
+        Object.fromEntries(batch.map((l) => [l.id, l.geocodeAddress!])),
+        apiKey
+      );
+      const now = new Date();
+      for (const l of batch) {
+        const r = results[l.id];
+        looked++;
+        if (r?.usable) placed++;
+        await prisma.mlsListing.update({
+          where: { id: l.id },
+          data: r?.usable
+            ? {
+                latitude: r.latitude,
+                longitude: r.longitude,
+                locationSource: "geocodio",
+                locationPrecision: r.precision,
+                locationCredit: r.credit,
+                geocodedAt: now,
+              }
+            : { locationPrecision: r?.precision ?? "not_found", geocodedAt: now },
+        });
+      }
+    }
+  }
+  const remaining = await prisma.mlsListing.count({ where });
+  return { looked, placed, usedToday: usedToday + looked, remaining };
 }
 
 // Open houses live in their own feed resource (a few thousand upcoming at any time), so

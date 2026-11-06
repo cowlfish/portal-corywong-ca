@@ -27,6 +27,10 @@ export interface MlsFeedListing {
 
   latitude?: number;
   longitude?: number;
+  // One-line street address for geocoding ("753 Queen Street E, Toronto, ON M4M 1H3"), no unit
+  geocodeAddress?: string;
+  // false when the seller hasn't allowed the address to be shown online
+  addressDisplay?: boolean;
 
   bedrooms?: number;
   bedroomsPlus?: number;

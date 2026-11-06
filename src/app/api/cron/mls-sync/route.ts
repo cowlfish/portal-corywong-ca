@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createProvider } from "@/lib/mls/providers";
-import { backfillListingDetails, geocodeListings, pruneCommercialListings, runDeltaSync, syncOpenHouses } from "@/lib/mls/sync/engine";
+import {
+  backfillListingDetails,
+  geocodeListings,
+  geocodeStreetAddresses,
+  pruneCommercialListings,
+  runDeltaSync,
+  syncOpenHouses,
+} from "@/lib/mls/sync/engine";
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -26,10 +33,15 @@ export async function GET(request: NextRequest) {
     // Small backfill each run while older listings are still missing fields
     const backfill = result.skipped ? null : await backfillListingDetails(provider, { maxListings: 500, maxMs: 20_000 });
     const geocode = result.skipped ? null : await geocodeListings({ maxListings: 1000, maxMs: 5_000 });
+    // Street addresses through Geocodio, paced to its free daily allowance. A Geocodio outage
+    // leaves pins at the postal code; it shouldn't fail the sync.
+    const addresses = result.skipped
+      ? null
+      : await geocodeStreetAddresses().catch((err) => ({ error: err instanceof Error ? err.message : String(err) }));
     // Open houses: once an hour (the first run after the top of the hour)
     const openHouses = !result.skipped && new Date().getUTCMinutes() < 15 ? await syncOpenHouses(provider) : null;
     const commercialPruned = result.skipped ? null : await pruneCommercialListings({ maxListings: 2000 });
-    return NextResponse.json({ ok: true, result, backfill, geocode, openHouses, commercialPruned });
+    return NextResponse.json({ ok: true, result, backfill, geocode, addresses, openHouses, commercialPruned });
   } catch (err) {
     return NextResponse.json(
       {

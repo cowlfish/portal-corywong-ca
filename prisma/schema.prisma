@@ -59,6 +59,19 @@ model MlsListing {
   // Geo
   latitude  Decimal? @db.Decimal(10, 7)
   longitude Decimal? @db.Decimal(10, 7)
+  // Where latitude/longitude came from: "geocodio" (the street address), "postal" (postal code
+  // centre), "area" (centre of the postal code's first three characters) or "feed"
+  locationSource    String?   @map("location_source")
+  // Geocodio's accuracy_type for the last lookup, e.g. "rooftop"
+  locationPrecision String?   @map("location_precision")
+  // Address data credit Geocodio returned (e.g. City of Toronto, Statistics Canada); shown on the listing
+  locationCredit    String?   @map("location_credit")
+  // Address as sent to Geocodio; when it changes the listing is looked up again
+  geocodeAddress    String?   @map("geocode_address")
+  // Last Geocodio lookup; also counts lookups against the free daily allowance
+  geocodedAt        DateTime? @map("geocoded_at")
+  // The seller allows the address to be shown online (InternetAddressDisplayYN)
+  addressDisplay    Boolean   @default(true) @map("address_display")
 
   // Property details
   bedrooms      Int?
@@ -139,6 +152,7 @@ model MlsListing {
   @@index([bedrooms, bathrooms])
   @@index([feedUpdatedAt])
   @@index([latitude, longitude])
+  @@index([geocodedAt])
   @@index([listingKey])
   @@map("mls_listings")
 }

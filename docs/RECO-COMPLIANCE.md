@@ -51,7 +51,8 @@ features as they actually work:
 ## Links and third parties (5.3)
 
 Links off-site must not suggest you provide or endorse those services. Currently linked:
-reco.on.ca, openstreetmap.org (map attribution). The check prints the list on every build.
+reco.on.ca, geonames.org (map pin data credit), policies.google.com (privacy policy). Maps are Google
+Maps (2026-11-06; the map shows Google's own links). The check prints the list on every build.
 
 ## Audit, 2026-10-20
 

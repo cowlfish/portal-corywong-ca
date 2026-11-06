@@ -74,6 +74,12 @@ export default function PrivacyPage() {
         may be accessible to authorities under local law. They are permitted to use it only to provide their services
         to us.
       </p>
+      <p>
+        Maps on the Portal are provided by Google Maps. When a page shows a map, your browser loads it directly from
+        Google, which receives your IP address and basic browser information and handles them under its own{" "}
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">privacy policy</a>.
+        We do not send Google your name, contact details or saved listings.
+      </p>
 
       <h2>4. Cookies</h2>
       <p>

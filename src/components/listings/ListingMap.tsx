@@ -112,7 +112,14 @@ export default function ListingMap({ listings, onBoundsChange, fitKey = "", zoom
           center: { lat: 43.6532, lng: -79.3832 },
           zoom: zoom ?? 11,
           mapId: MAP_ID,
-          mapTypeControl: false,
+          // Map / Satellite switch, top right (the source label sits top left). Google adds a
+          // "Labels" checkbox to Satellite for street names over the imagery.
+          mapTypeControl: true,
+          mapTypeControlOptions: {
+            mapTypeIds: ["roadmap", "satellite"],
+            style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+            position: google.maps.ControlPosition.TOP_RIGHT,
+          },
           fullscreenControl: false,
           clickableIcons: false,
         });
